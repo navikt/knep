@@ -175,11 +175,11 @@ func (r *PodReconciler) deleteNetPol(ctx context.Context, pod corev1.Pod) error 
 		},
 	}
 	if err := r.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, netpol); err != nil {
-		if !apierrors.IsAlreadyExists(err) {
+		if !apierrors.IsNotFound(err) {
 			return err
 		}
 
-		fmt.Println("already exists")
+		fmt.Println("does not exist")
 		return nil
 	}
 
