@@ -110,12 +110,12 @@ func (r *PodReconciler) alterNetPol(ctx context.Context, pod corev1.Pod, allowLi
 	switch pod.Status.Phase {
 	case corev1.PodPending:
 		fmt.Println("creating netpol")
-		r.createNetPol(ctx, pod, allowListMap)
+		return r.createNetPol(ctx, pod, allowListMap)
 	case corev1.PodSucceeded:
 		fallthrough
 	case corev1.PodFailed:
 		fmt.Println("removing netpol")
-		r.deleteNetPol(ctx, pod)
+		return r.deleteNetPol(ctx, pod)
 	}
 	return nil
 }
@@ -123,7 +123,7 @@ func (r *PodReconciler) alterNetPol(ctx context.Context, pod corev1.Pod, allowLi
 func (r *PodReconciler) createNetPol(ctx context.Context, pod corev1.Pod, allowListMap map[string][]string) error {
 	netpol := &networkingV1.NetworkPolicy{}
 	if err := r.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, netpol); err != nil {
-		if !apierrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			// ignoring if netpol already exists
 			fmt.Println("netpol already exists")
 			return nil
