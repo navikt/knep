@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"strconv"
 	"strings"
@@ -89,8 +88,6 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, nil
 	}
 
-	fmt.Println(allowListMap)
-
 	if err := r.alterNetPol(ctx, pod, allowListMap); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -106,20 +103,23 @@ func (r *PodReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *PodReconciler) alterNetPol(ctx context.Context, pod corev1.Pod, allowListMap map[string][]string) error {
+	logger := log.FromContext(ctx)
 	switch pod.Status.Phase {
 	case corev1.PodPending:
-		fmt.Println("creating netpol")
+		logger.Info("Creating netpol", "podName", pod.Name, "namespace", pod.Namespace)
 		return r.createNetPol(ctx, pod, allowListMap)
 	case corev1.PodSucceeded:
 		fallthrough
 	case corev1.PodFailed:
-		fmt.Println("removing netpol")
+		logger.Info("Removing netpol", "podName", pod.Name, "namespace", pod.Namespace)
 		return r.deleteNetPol(ctx, pod)
 	}
 	return nil
 }
 
 func (r *PodReconciler) createNetPol(ctx context.Context, pod corev1.Pod, allowListMap map[string][]string) error {
+	logger := log.FromContext(ctx)
+
 	netpol := &networkingV1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      pod.Name,
@@ -128,12 +128,14 @@ func (r *PodReconciler) createNetPol(ctx context.Context, pod corev1.Pod, allowL
 	}
 	if err := r.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, netpol); err != nil {
 		if apierrors.IsAlreadyExists(err) {
-			fmt.Println("already exists")
+			logger.Info("Netpol already exists", "pod", pod.Name, "namespace", pod.Namespace)
 			return nil
 		} else if !apierrors.IsNotFound(err) {
 			return err
 		}
 	}
+
+	logger.Info("Netpol allowlist", allowListMap)
 
 	egressRules, err := createEgressRules(ctx, allowListMap)
 	if err != nil {
@@ -165,6 +167,8 @@ func (r *PodReconciler) createNetPol(ctx context.Context, pod corev1.Pod, allowL
 }
 
 func (r *PodReconciler) deleteNetPol(ctx context.Context, pod corev1.Pod) error {
+	logger := log.FromContext(ctx)
+
 	netpol := &networkingV1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      pod.Name,
@@ -173,7 +177,7 @@ func (r *PodReconciler) deleteNetPol(ctx context.Context, pod corev1.Pod) error 
 	}
 	if err := r.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, netpol); err != nil {
 		if apierrors.IsNotFound(err) {
-			fmt.Println("does not exist")
+			logger.Info("Netpol does not exists", "pod", pod.Name, "namespace", pod.Namespace)
 			return nil
 		}
 
