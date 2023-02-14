@@ -10,29 +10,29 @@ spec:
       protocol: TCP
     to:
     - ipBlock:
-        cidr: 169.254.169.254/32 # metadata server
+        cidr: 169.254.169.254/32 # metadata server (for workload identity)
   - ports:
     - port: 443
       protocol: TCP
     to:
     - ipBlock:
-        cidr: 140.82.112.0/20 # github
+        cidr: 140.82.112.0/20 # github (clone repo with dags)
     - ipBlock:
-        cidr: 173.194.0.0/16 # google
+        cidr: 173.194.0.0/16 # storage.googleapis.com (for log write) 
     - ipBlock:
-        cidr: 66.102.0.0/20 # google
+        cidr: 66.102.0.0/20 # storage.googleapis.com (for log write)
     - ipBlock:
-        cidr: 74.125.0.0/16 # google
+        cidr: 74.125.0.0/16 # storage.googleapis.com (for log write)
     - ipBlock:
-        cidr: 64.233.160.0/19 # google
+        cidr: 64.233.160.0/19 # storage.googleapis.com (for log write)
     - ipBlock:
-        cidr: 142.250.0.0/15 # google
-  - ports:
+        cidr: 142.250.0.0/15 # storage.googleapis.com (for log write)
+  - ports: # dns
     - port: 53
       protocol: UDP
     - port: 53
       protocol: TCP
-  - ports:
+  - ports: # airflow db
     - port: 5432
       protocol: TCP
     to:
