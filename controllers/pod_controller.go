@@ -124,10 +124,10 @@ func (r *PodReconciler) createNetPol(ctx context.Context, pod corev1.Pod, allowL
 	netpol := &networkingV1.NetworkPolicy{}
 	if err := r.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, netpol); err != nil {
 		if !apierrors.IsNotFound(err) {
-			return nil
+			return err
 		}
 
-		return err
+		return nil
 	}
 
 	egressRules, err := createEgressRules(ctx, allowListMap)
