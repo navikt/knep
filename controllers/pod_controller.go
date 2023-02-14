@@ -127,6 +127,7 @@ func (r *PodReconciler) createNetPol(ctx context.Context, pod corev1.Pod, allowL
 			return err
 		}
 
+		fmt.Println("already exists")
 		return nil
 	}
 
