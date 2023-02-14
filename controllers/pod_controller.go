@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strconv"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -224,6 +225,10 @@ func createPortHostMap(hosts []string) map[string][]string {
 func createEgressRules(ctx context.Context, portHostMap map[string][]string) ([]networkingV1.NetworkPolicyEgressRule, error) {
 	egressRules := []networkingV1.NetworkPolicyEgressRule{}
 	for port, hosts := range portHostMap {
+		portInt, err := strconv.Atoi(port)
+		if err != nil {
+			return nil, err
+		}
 		policyPeers, err := createPolicyPeers(ctx, hosts)
 		if err != nil {
 			return nil, err
@@ -233,7 +238,7 @@ func createEgressRules(ctx context.Context, portHostMap map[string][]string) ([]
 				To: policyPeers,
 				Ports: []networkingV1.NetworkPolicyPort{
 					{
-						Port: &intstr.IntOrString{StrVal: port},
+						Port: &intstr.IntOrString{IntVal: int32(portInt)},
 					},
 				},
 			})
