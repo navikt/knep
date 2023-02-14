@@ -1,0 +1,44 @@
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  workerPool:
+    "projects/knada-gcp/locations/europe-west1/workerPools/knada-cloudbuild-pool"
+
+serviceAccount: "projects/knada-gcp/serviceAccounts/ci-knorten-cloud-build@knada-gcp.iam.gserviceaccount.com"
+
+steps:
+- name: "gcr.io/cloud-builders/docker"
+  args: ["build", "-t", "europe-west1-docker.pkg.dev/$PROJECT_ID/knetpoller/knetpoller:$SHORT_SHA", "." ]
+- name: "gcr.io/cloud-builders/docker"
+  args: ["push", "europe-west1-docker.pkg.dev/$PROJECT_ID/knetpoller/knetpoller:$SHORT_SHA"]
+- name: "gcr.io/cloud-builders/gke-deploy"
+  args:
+  - run
+  - --filename=config/rbac/service_account.yaml
+  - --location=$_REGION
+  - --cluster=$_CLUSTER
+  - --timeout=10m0s
+- name: "gcr.io/cloud-builders/gke-deploy"
+  args:
+  - run
+  - --filename=config/rbac/role.yaml
+  - --location=$_REGION
+  - --cluster=$_CLUSTER
+  - --timeout=10m0s
+- name: "gcr.io/cloud-builders/gke-deploy"
+  args:
+  - run
+  - --filename=config/rbac/role_binding.yaml
+  - --location=$_REGION
+  - --cluster=$_CLUSTER
+  - --timeout=10m0s
+- name: "gcr.io/cloud-builders/gke-deploy"
+  args:
+  - run
+  - --filename=config/manager/manager.yaml
+  - --image=europe-west1-docker.pkg.dev/$PROJECT_ID/knetpoller/knetpoller:$SHORT_SHA
+  - --location=$_REGION
+  - --cluster=$_CLUSTER
+  - --timeout=10m0s
+images:
+- "europe-west1-docker.pkg.dev/$PROJECT_ID/knetpoller/knetpoller:$SHORT_SHA"
