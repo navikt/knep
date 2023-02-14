@@ -83,14 +83,16 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, nil
 	}
 
-	allowList := extractAllowList(pod.Annotations)
-	if len(allowList) == 0 {
+	allowListMap := extractAllowList(pod.Annotations)
+	if len(allowListMap) == 0 {
 		return ctrl.Result{}, nil
 	}
 
 	logger.Info("pod: %v, namespace: %v", req.Name, req.Namespace)
 
-	if err := r.alterNetPol(ctx, pod, allowList); err != nil {
+	fmt.Println(allowListMap)
+
+	if err := r.alterNetPol(ctx, pod, allowListMap); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -104,11 +106,11 @@ func (r *PodReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *PodReconciler) alterNetPol(ctx context.Context, pod corev1.Pod, allowList []string) error {
+func (r *PodReconciler) alterNetPol(ctx context.Context, pod corev1.Pod, allowListMap map[string][]string) error {
 	switch pod.Status.Phase {
 	case corev1.PodPending:
 		fmt.Println("creating netpol")
-		r.createNetPol(ctx, pod, allowList)
+		r.createNetPol(ctx, pod, allowListMap)
 	case corev1.PodSucceeded:
 		fallthrough
 	case corev1.PodFailed:
@@ -118,7 +120,7 @@ func (r *PodReconciler) alterNetPol(ctx context.Context, pod corev1.Pod, allowLi
 	return nil
 }
 
-func (r *PodReconciler) createNetPol(ctx context.Context, pod corev1.Pod, allowList []string) error {
+func (r *PodReconciler) createNetPol(ctx context.Context, pod corev1.Pod, allowListMap map[string][]string) error {
 	netpol := &networkingV1.NetworkPolicy{}
 	if err := r.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, netpol); err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -130,7 +132,7 @@ func (r *PodReconciler) createNetPol(ctx context.Context, pod corev1.Pod, allowL
 		return err
 	}
 
-	policyPeers, err := createPolicyPeers(ctx, allowList)
+	egressRules, err := createEgressRules(ctx, allowListMap)
 	if err != nil {
 		return err
 	}
@@ -148,16 +150,7 @@ func (r *PodReconciler) createNetPol(ctx context.Context, pod corev1.Pod, allowL
 					"task_id": pod.Labels["task_id"],
 				},
 			},
-			Egress: []networkingV1.NetworkPolicyEgressRule{
-				{
-					To: policyPeers,
-					Ports: []networkingV1.NetworkPolicyPort{
-						{
-							Port: &intstr.IntOrString{IntVal: int32(443)},
-						},
-					},
-				},
-			},
+			Egress: egressRules,
 		},
 	}
 
@@ -190,18 +183,54 @@ func isAirflowWorker(podLabels map[string]string) bool {
 	return false
 }
 
-func extractAllowList(annotations map[string]string) []string {
+func extractAllowList(annotations map[string]string) map[string][]string {
 	if allowList, ok := annotations[allowListAnnotationKey]; ok {
-		return strings.Split(allowList, ",")
+		hosts := strings.Split(allowList, ",")
+		return createPortHostMap(hosts)
 	}
 
-	return []string{}
+	return map[string][]string{}
 }
 
-func createPolicyPeers(ctx context.Context, allowList []string) ([]networkingV1.NetworkPolicyPeer, error) {
+func createPortHostMap(hosts []string) map[string][]string {
+	portHostMap := map[string][]string{}
+	for _, h := range hosts {
+		parts := strings.Split(h, ":")
+		if len(parts) > 1 {
+			portHostMap[parts[1]] = append(portHostMap[parts[1]], parts[0])
+		} else {
+			portHostMap["443"] = append(portHostMap["443"], parts[0])
+		}
+	}
+
+	return portHostMap
+}
+
+func createEgressRules(ctx context.Context, portHostMap map[string][]string) ([]networkingV1.NetworkPolicyEgressRule, error) {
+	egressRules := []networkingV1.NetworkPolicyEgressRule{}
+	for port, hosts := range portHostMap {
+		policyPeers, err := createPolicyPeers(ctx, hosts)
+		if err != nil {
+			return nil, err
+		}
+		egressRules = append(egressRules,
+			networkingV1.NetworkPolicyEgressRule{
+				To: policyPeers,
+				Ports: []networkingV1.NetworkPolicyPort{
+					{
+						Port: &intstr.IntOrString{StrVal: port},
+					},
+				},
+			})
+	}
+
+	return egressRules, nil
+}
+
+func createPolicyPeers(ctx context.Context, hosts []string) ([]networkingV1.NetworkPolicyPeer, error) {
 	policyPeers := []networkingV1.NetworkPolicyPeer{}
-	for _, a := range allowList {
-		ips, err := net.DefaultResolver.LookupIP(ctx, "ip4", a)
+	for _, h := range hosts {
+		ips, err := net.DefaultResolver.LookupIP(ctx, "ip4", h)
 		if err != nil {
 			return nil, err
 		}
@@ -213,6 +242,7 @@ func createPolicyPeers(ctx context.Context, allowList []string) ([]networkingV1.
 				},
 			})
 		}
+
 	}
 
 	return policyPeers, nil
