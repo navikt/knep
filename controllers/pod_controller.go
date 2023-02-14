@@ -121,7 +121,12 @@ func (r *PodReconciler) alterNetPol(ctx context.Context, pod corev1.Pod, allowLi
 }
 
 func (r *PodReconciler) createNetPol(ctx context.Context, pod corev1.Pod, allowListMap map[string][]string) error {
-	netpol := &networkingV1.NetworkPolicy{}
+	netpol := &networkingV1.NetworkPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      pod.Name,
+			Namespace: pod.Namespace,
+		},
+	}
 	if err := r.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, netpol); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return err
@@ -169,6 +174,15 @@ func (r *PodReconciler) deleteNetPol(ctx context.Context, pod corev1.Pod) error 
 			Namespace: pod.Namespace,
 		},
 	}
+	if err := r.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, netpol); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+
+		fmt.Println("already exists")
+		return nil
+	}
+
 	if err := r.Delete(ctx, netpol); err != nil {
 		return err
 	}
