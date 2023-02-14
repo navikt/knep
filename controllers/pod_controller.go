@@ -106,12 +106,12 @@ func (r *PodReconciler) alterNetPol(ctx context.Context, pod corev1.Pod, allowLi
 	logger := log.FromContext(ctx)
 	switch pod.Status.Phase {
 	case corev1.PodPending:
-		logger.Info("Creating netpol", "podName", pod.Name, "namespace", pod.Namespace)
+		logger.Info("Creating netpol", "podName")
 		return r.createNetPol(ctx, pod, allowListMap)
 	case corev1.PodSucceeded:
 		fallthrough
 	case corev1.PodFailed:
-		logger.Info("Removing netpol", "podName", pod.Name, "namespace", pod.Namespace)
+		logger.Info("Removing netpol", "podName")
 		return r.deleteNetPol(ctx, pod)
 	}
 	return nil
@@ -128,14 +128,12 @@ func (r *PodReconciler) createNetPol(ctx context.Context, pod corev1.Pod, allowL
 	}
 	if err := r.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, netpol); err != nil {
 		if apierrors.IsAlreadyExists(err) {
-			logger.Info("Netpol already exists", "pod", pod.Name, "namespace", pod.Namespace)
+			logger.Info("Netpol already exists")
 			return nil
 		} else if !apierrors.IsNotFound(err) {
 			return err
 		}
 	}
-
-	logger.Info("Netpol allowlist", allowListMap)
 
 	egressRules, err := createEgressRules(ctx, allowListMap)
 	if err != nil {
