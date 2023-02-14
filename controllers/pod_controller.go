@@ -89,8 +89,6 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, nil
 	}
 
-	logger.Info("pod: %v, namespace: %v", req.Name, req.Namespace)
-
 	fmt.Println(allowListMap)
 
 	if err := r.alterNetPol(ctx, pod, allowListMap); err != nil {
@@ -141,8 +139,6 @@ func (r *PodReconciler) createNetPol(ctx context.Context, pod corev1.Pod, allowL
 	if err != nil {
 		return err
 	}
-
-	fmt.Println(egressRules)
 
 	netpol = &networkingV1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
