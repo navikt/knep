@@ -123,9 +123,7 @@ func (r *PodReconciler) alterNetPol(ctx context.Context, pod corev1.Pod, allowLi
 func (r *PodReconciler) createNetPol(ctx context.Context, pod corev1.Pod, allowListMap map[string][]string) error {
 	netpol := &networkingV1.NetworkPolicy{}
 	if err := r.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, netpol); err != nil {
-		if apierrors.IsNotFound(err) {
-			// ignoring if netpol already exists
-			fmt.Println("netpol already exists")
+		if !apierrors.IsNotFound(err) {
 			return nil
 		}
 
