@@ -137,6 +137,8 @@ func (r *PodReconciler) createNetPol(ctx context.Context, pod corev1.Pod, allowL
 		return err
 	}
 
+	fmt.Println(egressRules)
+
 	netpol = &networkingV1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      pod.Name,
