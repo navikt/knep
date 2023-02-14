@@ -128,12 +128,12 @@ func (r *PodReconciler) createNetPol(ctx context.Context, pod corev1.Pod, allowL
 		},
 	}
 	if err := r.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, netpol); err != nil {
-		if !apierrors.IsAlreadyExists(err) {
+		if apierrors.IsAlreadyExists(err) {
+			fmt.Println("already exists")
+			return nil
+		} else if !apierrors.IsNotFound(err) {
 			return err
 		}
-
-		fmt.Println("already exists")
-		return nil
 	}
 
 	egressRules, err := createEgressRules(ctx, allowListMap)
@@ -175,12 +175,12 @@ func (r *PodReconciler) deleteNetPol(ctx context.Context, pod corev1.Pod) error 
 		},
 	}
 	if err := r.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, netpol); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return err
+		if apierrors.IsNotFound(err) {
+			fmt.Println("does not exist")
+			return nil
 		}
 
-		fmt.Println("does not exist")
-		return nil
+		return err
 	}
 
 	if err := r.Delete(ctx, netpol); err != nil {
