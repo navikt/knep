@@ -118,6 +118,7 @@ func (r *PodReconciler) alterNetPol(ctx context.Context, pod corev1.Pod, allowLi
 }
 
 func (r *PodReconciler) createNetPol(ctx context.Context, pod corev1.Pod, allowListMap map[string][]string) error {
+	logger := log.FromContext(ctx)
 	netpol := &networkingV1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      pod.Name,
@@ -125,7 +126,11 @@ func (r *PodReconciler) createNetPol(ctx context.Context, pod corev1.Pod, allowL
 		},
 	}
 	err := r.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, netpol)
-	if err != nil && !apierrors.IsNotFound(err) {
+	if err == nil {
+		logger.Info("Netpol already exists")
+		return nil
+	}
+	if !apierrors.IsNotFound(err) {
 		return err
 	}
 
