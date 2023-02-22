@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"strconv"
 	"strings"
@@ -251,6 +252,8 @@ func createPolicyPeers(ctx context.Context, hosts []string) ([]networkingV1.Netw
 		if err != nil {
 			return nil, err
 		}
+
+		fmt.Println(h, ips)
 
 		for _, ip := range ips {
 			policyPeers = append(policyPeers, networkingV1.NetworkPolicyPeer{
