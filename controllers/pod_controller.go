@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"strconv"
 	"strings"
@@ -79,7 +78,8 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
-	if !isAirflowWorker(pod.Labels) {
+	// temporarily restrict controller to team-knada-hyka namespace
+	if !isAirflowWorker(pod.Labels) || pod.Namespace != "team-knada-hyka" {
 		return ctrl.Result{}, nil
 	}
 
@@ -251,9 +251,6 @@ func createPolicyPeers(ctx context.Context, hosts []string) ([]networkingV1.Netw
 		if err != nil {
 			return nil, err
 		}
-
-		fmt.Println(h, ips)
-
 		for _, ip := range ips {
 			policyPeers = append(policyPeers, networkingV1.NetworkPolicyPeer{
 				IPBlock: &networkingV1.IPBlock{
