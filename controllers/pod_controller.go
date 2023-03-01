@@ -45,6 +45,7 @@ const (
 	airflowLabelKey        = "component"
 	workerLabelValue       = "worker"
 	allowListAnnotationKey = "allowlist"
+	defaultNetpolName      = "default-egress-airflow-worker"
 )
 
 //+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch;create;update;patch;delete
@@ -78,8 +79,12 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
-	// temporarily restrict controller to team-knada-hyka namespace
-	if !isAirflowWorker(pod.Labels) || pod.Namespace != "team-knada-hyka" {
+	if !isAirflowWorker(pod.Labels) {
+		return ctrl.Result{}, nil
+	}
+
+	if err := r.defaultNetpolExists(ctx, pod.Namespace); err != nil {
+		logger.Info("Ignoring namespace as default netpol does not exist")
 		return ctrl.Result{}, nil
 	}
 
@@ -194,6 +199,20 @@ func isAirflowWorker(podLabels map[string]string) bool {
 	}
 
 	return false
+}
+
+func (r *PodReconciler) defaultNetpolExists(ctx context.Context, namespace string) error {
+	netpol := &networkingV1.NetworkPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      defaultNetpolName,
+			Namespace: namespace,
+		},
+	}
+	err := r.Get(ctx, types.NamespacedName{Name: defaultNetpolName, Namespace: namespace}, netpol)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func extractAllowList(annotations map[string]string) map[string][]string {
