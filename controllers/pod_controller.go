@@ -80,7 +80,7 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	}
 
 	// temporarily restrict controller to team-knada-hyka namespace
-	if !isAirflowWorker(pod.Labels) || pod.Namespace != "team-knada-hyka" {
+	if !isAirflowWorker(pod.Labels) {
 		return ctrl.Result{}, nil
 	}
 
