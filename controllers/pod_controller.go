@@ -208,11 +208,8 @@ func (r *PodReconciler) defaultNetpolExists(ctx context.Context, namespace strin
 			Namespace: namespace,
 		},
 	}
-	err := r.Get(ctx, types.NamespacedName{Name: defaultNetpolName, Namespace: namespace}, netpol)
-	if err != nil {
-		return err
-	}
-	return nil
+
+	return r.Get(ctx, types.NamespacedName{Name: defaultNetpolName, Namespace: namespace}, netpol)
 }
 
 func extractAllowList(annotations map[string]string) map[string][]string {
