@@ -20,4 +20,4 @@ spec:
       - name: ghcr-credentials
       containers:
       - name: knetpoller
-        image: europe-west1-docker.pkg.dev/knada-gcp/knetpoller/knetpoller
+        image: europe-west1-docker.pkg.dev/knada-gcp/knada/knetpoller
