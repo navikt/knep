@@ -1,23 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: knetpoller
+  name: knep
   namespace: knada-system
   labels:
-    app: knetpoller
+    app: knep
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: knetpoller
+      app: knep
   template:
     metadata:
       labels:
-        app: knetpoller
+        app: knep
     spec:
       serviceAccountName: knetpoller
       imagePullSecrets:
       - name: ghcr-credentials
       containers:
-      - name: knetpoller
-        image: europe-west1-docker.pkg.dev/knada-gcp/knada/knetpoller
+      - name: knep
+        image: europe-west1-docker.pkg.dev/knada-gcp/knada/knep

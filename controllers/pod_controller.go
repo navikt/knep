@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"net"
 	"strconv"
 	"strings"
 
@@ -33,6 +32,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	networkingv1alpha3 "github.com/GoogleCloudPlatform/gke-fqdnnetworkpolicies-golang/api/v1alpha3"
 )
 
 // PodReconciler reconciles a Pod object
@@ -45,7 +46,7 @@ const (
 	airflowLabelKey        = "component"
 	workerLabelValue       = "worker"
 	allowListAnnotationKey = "allowlist"
-	defaultNetpolName      = "default-egress-airflow-worker"
+	defaultNetpolName      = "airflow-worker-allow-fqdn"
 )
 
 //+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch;create;update;patch;delete
@@ -84,7 +85,7 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	}
 
 	if err := r.defaultNetpolExists(ctx, pod.Namespace); err != nil {
-		logger.Info("Ignoring namespace as default netpol does not exist")
+		logger.Info("Ignoring namespace as default fqdn netpol does not exist")
 		return ctrl.Result{}, nil
 	}
 
@@ -124,15 +125,16 @@ func (r *PodReconciler) alterNetPol(ctx context.Context, pod corev1.Pod, allowLi
 
 func (r *PodReconciler) createNetPol(ctx context.Context, pod corev1.Pod, allowListMap map[string][]string) error {
 	logger := log.FromContext(ctx)
-	netpol := &networkingV1.NetworkPolicy{
+	fqdnNetpol := &networkingv1alpha3.FQDNNetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      pod.Name,
 			Namespace: pod.Namespace,
 		},
 	}
-	err := r.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, netpol)
+
+	err := r.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, fqdnNetpol)
 	if err == nil {
-		logger.Info("Netpol already exists")
+		logger.Info("FQDN netpol already exists")
 		return nil
 	}
 	if !apierrors.IsNotFound(err) {
@@ -144,12 +146,12 @@ func (r *PodReconciler) createNetPol(ctx context.Context, pod corev1.Pod, allowL
 		return err
 	}
 
-	netpol = &networkingV1.NetworkPolicy{
+	fqdnNetpol = &networkingv1alpha3.FQDNNetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      pod.Name,
 			Namespace: pod.Namespace,
 		},
-		Spec: networkingV1.NetworkPolicySpec{
+		Spec: networkingv1alpha3.FQDNNetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"run_id":  pod.Labels["run_id"],
@@ -161,7 +163,7 @@ func (r *PodReconciler) createNetPol(ctx context.Context, pod corev1.Pod, allowL
 		},
 	}
 
-	if err := r.Create(ctx, netpol); err != nil {
+	if err := r.Create(ctx, fqdnNetpol); err != nil {
 		return err
 	}
 
@@ -171,13 +173,13 @@ func (r *PodReconciler) createNetPol(ctx context.Context, pod corev1.Pod, allowL
 func (r *PodReconciler) deleteNetPol(ctx context.Context, pod corev1.Pod) error {
 	logger := log.FromContext(ctx)
 
-	netpol := &networkingV1.NetworkPolicy{
+	fqdnNetpol := &networkingv1alpha3.FQDNNetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      pod.Name,
 			Namespace: pod.Namespace,
 		},
 	}
-	if err := r.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, netpol); err != nil {
+	if err := r.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, fqdnNetpol); err != nil {
 		if apierrors.IsNotFound(err) {
 			logger.Info("Netpol does not exists")
 			return nil
@@ -186,7 +188,7 @@ func (r *PodReconciler) deleteNetPol(ctx context.Context, pod corev1.Pod) error 
 		return err
 	}
 
-	if err := r.Delete(ctx, netpol); err != nil {
+	if err := r.Delete(ctx, fqdnNetpol); err != nil {
 		return err
 	}
 
@@ -202,14 +204,14 @@ func isAirflowWorker(podLabels map[string]string) bool {
 }
 
 func (r *PodReconciler) defaultNetpolExists(ctx context.Context, namespace string) error {
-	netpol := &networkingV1.NetworkPolicy{
+	fqdnNetpol := &networkingv1alpha3.FQDNNetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      defaultNetpolName,
 			Namespace: namespace,
 		},
 	}
 
-	return r.Get(ctx, types.NamespacedName{Name: defaultNetpolName, Namespace: namespace}, netpol)
+	return r.Get(ctx, types.NamespacedName{Name: defaultNetpolName, Namespace: namespace}, fqdnNetpol)
 }
 
 func extractAllowList(annotations map[string]string) map[string][]string {
@@ -235,19 +237,21 @@ func createPortHostMap(hosts []string) map[string][]string {
 	return portHostMap
 }
 
-func createEgressRules(ctx context.Context, portHostMap map[string][]string) ([]networkingV1.NetworkPolicyEgressRule, error) {
-	egressRules := []networkingV1.NetworkPolicyEgressRule{}
+func createEgressRules(ctx context.Context, portHostMap map[string][]string) ([]networkingv1alpha3.FQDNNetworkPolicyEgressRule, error) {
+	egressRules := []networkingv1alpha3.FQDNNetworkPolicyEgressRule{}
 	for port, hosts := range portHostMap {
 		portInt, err := strconv.Atoi(port)
 		if err != nil {
 			return nil, err
 		}
-		policyPeers, err := createPolicyPeers(ctx, hosts)
-		if err != nil {
-			return nil, err
+
+		policyPeers := []networkingv1alpha3.FQDNNetworkPolicyPeer{
+			{
+				FQDNs: hosts,
+			},
 		}
 		egressRules = append(egressRules,
-			networkingV1.NetworkPolicyEgressRule{
+			networkingv1alpha3.FQDNNetworkPolicyEgressRule{
 				To: policyPeers,
 				Ports: []networkingV1.NetworkPolicyPort{
 					{
@@ -258,24 +262,4 @@ func createEgressRules(ctx context.Context, portHostMap map[string][]string) ([]
 	}
 
 	return egressRules, nil
-}
-
-func createPolicyPeers(ctx context.Context, hosts []string) ([]networkingV1.NetworkPolicyPeer, error) {
-	policyPeers := []networkingV1.NetworkPolicyPeer{}
-	for _, h := range hosts {
-		ips, err := net.DefaultResolver.LookupIP(ctx, "ip4", h)
-		if err != nil {
-			return nil, err
-		}
-		for _, ip := range ips {
-			policyPeers = append(policyPeers, networkingV1.NetworkPolicyPeer{
-				IPBlock: &networkingV1.IPBlock{
-					CIDR: ip.String() + "/32",
-				},
-			})
-		}
-
-	}
-
-	return policyPeers, nil
 }
