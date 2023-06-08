@@ -32,6 +32,32 @@ rules:
   - patch
   - update
 - apiGroups:
+  - networking.gke.io
+  resources:
+  - fqdnnetworkpolicies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - networking.gke.io
+  resources:
+  - fqdnnetworkpolicies/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - networking.gke.io
+  resources:
+  - fqdnnetworkpolicies/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - networking.k8s.io
   resources:
   - networkpolicies
