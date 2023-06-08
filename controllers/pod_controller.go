@@ -207,6 +207,7 @@ func isAirflowWorker(podLabels map[string]string) bool {
 }
 
 func (r *PodReconciler) defaultNetpolExists(ctx context.Context, namespace string) error {
+	logger := log.FromContext(ctx)
 	fqdnNetpol := &networkingv1alpha3.FQDNNetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      defaultNetpolName,
@@ -214,7 +215,9 @@ func (r *PodReconciler) defaultNetpolExists(ctx context.Context, namespace strin
 		},
 	}
 
-	return r.Get(ctx, types.NamespacedName{Name: defaultNetpolName, Namespace: namespace}, fqdnNetpol)
+	err := r.Get(ctx, types.NamespacedName{Name: defaultNetpolName, Namespace: namespace}, fqdnNetpol)
+	logger.Info(err.Error())
+	return err
 }
 
 func extractAllowList(annotations map[string]string) map[string][]string {
