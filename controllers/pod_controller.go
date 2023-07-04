@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -43,8 +44,9 @@ type PodReconciler struct {
 }
 
 const (
-	airflowLabelKey        = "component"
+	labelKey               = "component"
 	workerLabelValue       = "worker"
+	jupyterhubLabelValue   = "singleuser-server"
 	allowListAnnotationKey = "allowlist"
 	defaultNetpolName      = "airflow-worker-allow-fqdn"
 )
@@ -83,10 +85,9 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
-	if !isAirflowWorker(pod.Labels) {
+	if !isRelevantPod(pod.Labels) {
 		return ctrl.Result{}, nil
 	}
-
 	if err := r.defaultNetpolExists(ctx, pod.Namespace); err != nil {
 		logger.Info("Ignoring namespace as default fqdn netpol does not exist")
 		return ctrl.Result{}, nil
@@ -149,20 +150,19 @@ func (r *PodReconciler) createNetPol(ctx context.Context, pod corev1.Pod, allowL
 		return err
 	}
 
+	podSelector, err := createPodSelector(pod)
+	if err != nil {
+		return err
+	}
+
 	fqdnNetpol = &networkingv1alpha3.FQDNNetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      pod.Name,
 			Namespace: pod.Namespace,
 		},
 		Spec: networkingv1alpha3.FQDNNetworkPolicySpec{
-			PodSelector: metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"run_id":  pod.Labels["run_id"],
-					"dag_id":  pod.Labels["dag_id"],
-					"task_id": pod.Labels["task_id"],
-				},
-			},
-			Egress: egressRules,
+			PodSelector: podSelector,
+			Egress:      egressRules,
 		},
 	}
 
@@ -198,12 +198,34 @@ func (r *PodReconciler) deleteNetPol(ctx context.Context, pod corev1.Pod) error 
 	return nil
 }
 
-func isAirflowWorker(podLabels map[string]string) bool {
-	if component, ok := podLabels[airflowLabelKey]; ok {
-		return component == workerLabelValue
+func isRelevantPod(podLabels map[string]string) bool {
+	if component, ok := podLabels[labelKey]; ok {
+		return component == workerLabelValue || component == jupyterhubLabelValue
 	}
 
 	return false
+}
+
+func createPodSelector(pod corev1.Pod) (metav1.LabelSelector, error) {
+	switch pod.Labels[labelKey] {
+	case workerLabelValue:
+		return metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"run_id":  pod.Labels["run_id"],
+				"dag_id":  pod.Labels["dag_id"],
+				"task_id": pod.Labels["task_id"],
+			},
+		}, nil
+	case jupyterhubLabelValue:
+		return metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"component":                pod.Labels["component"],
+				"hub.jupyter.org/username": pod.Labels["hub.jupyter.org/username"],
+			},
+		}, nil
+	default:
+		return metav1.LabelSelector{}, fmt.Errorf("invalid pod labels when creating network policy for pod %v", pod.Name)
+	}
 }
 
 func (r *PodReconciler) defaultNetpolExists(ctx context.Context, namespace string) error {
