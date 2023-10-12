@@ -1,6 +1,6 @@
 module knada.io/knetpoller
 
-go 1.19
+go 1.21
 
 require (
 	github.com/GoogleCloudPlatform/gke-fqdnnetworkpolicies-golang v0.0.0-20230607210007-0feac1831f73
