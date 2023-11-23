@@ -110,7 +110,7 @@ func (r *PodReconciler) createNetpol(ctx context.Context, pod corev1.Pod) error 
 		}
 	}
 
-	allowList, _ := pod.Annotations[allowListAnnotationKey]
+	allowList := pod.Annotations[allowListAnnotationKey]
 	trimmedList := strings.ReplaceAll(allowList, " ", "")
 	hosts := strings.Split(trimmedList, ",")
 	allowStruct, err := createPortHostMap(hosts)
@@ -148,7 +148,8 @@ func (r *PodReconciler) createNetpol(ctx context.Context, pod corev1.Pod) error 
 		Type:   conditionKneped,
 		Status: corev1.ConditionTrue,
 	})
-	if err := r.Update(ctx, &pod); err != nil {
+
+	if err := r.Status().Update(ctx, &pod); err != nil {
 		return err
 	}
 
