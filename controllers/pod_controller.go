@@ -36,7 +36,7 @@ const (
 	jupyterhubLabelValue         = "singleuser-server"
 	allowListAnnotationKey       = "allowlist"
 	defaultFQDNNetworkPolicyName = "default-allow-fqdn"
-	conditionKneped              = "Kneped"
+	knepedLabel                  = "knada.io/kneped"
 )
 
 //+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch;create;update;patch;delete
@@ -100,9 +100,8 @@ func (r *PodReconciler) alterNetpols(ctx context.Context, pod corev1.Pod) error 
 }
 
 func (r *PodReconciler) createNetpol(ctx context.Context, pod corev1.Pod) error {
-	conditions := pod.Status.Conditions
-	for _, condition := range conditions {
-		if condition.Type == conditionKneped && condition.Status == corev1.ConditionTrue {
+	for key := range pod.Labels {
+		if key == knepedLabel {
 			return nil
 		}
 	}
@@ -141,12 +140,8 @@ func (r *PodReconciler) createNetpol(ctx context.Context, pod corev1.Pod) error 
 		return err
 	}
 
-	pod.Status.Conditions = append(pod.Status.Conditions, corev1.PodCondition{
-		Type:   conditionKneped,
-		Status: corev1.ConditionTrue,
-	})
-
-	if err := r.Status().Update(ctx, &pod); err != nil {
+	pod.Labels[knepedLabel] = "True"
+	if err := r.Update(ctx, &pod); err != nil {
 		return err
 	}
 
