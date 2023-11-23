@@ -38,7 +38,7 @@ const (
 	workerLabelValue             = "worker"
 	jupyterhubLabelValue         = "singleuser-server"
 	allowListAnnotationKey       = "allowlist"
-	defaultFQDNNetworkPolicyName = "airflow-worker-allow-fqdn"
+	defaultFQDNNetworkPolicyName = "default-allow-fqdn"
 	conditionKneped              = "Kneped"
 )
 
