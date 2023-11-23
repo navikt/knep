@@ -34,8 +34,8 @@ type allowIPFQDN struct {
 }
 
 const (
-	labelKey                     = "component"
-	workerLabelValue             = "worker"
+	jupyterPodLabelKey           = "component"
+	airflowPodLabelKey           = "dag_id"
 	jupyterhubLabelValue         = "singleuser-server"
 	allowListAnnotationKey       = "allowlist"
 	defaultFQDNNetworkPolicyName = "default-allow-fqdn"
@@ -263,16 +263,30 @@ func (r *PodReconciler) deleteNetpol(ctx context.Context, pod corev1.Pod) error 
 }
 
 func isRelevantPod(podLabels map[string]string) bool {
-	if component, ok := podLabels[labelKey]; ok {
-		return component == workerLabelValue || component == jupyterhubLabelValue
+	// Check if Jupyter
+	if component, ok := podLabels[jupyterPodLabelKey]; ok {
+		return component == jupyterhubLabelValue
+	}
+
+	// Check if Airflow
+	if _, ok := podLabels[airflowPodLabelKey]; ok {
+		return true
 	}
 
 	return false
 }
 
 func createPodSelector(pod corev1.Pod) (metav1.LabelSelector, error) {
-	switch pod.Labels[labelKey] {
-	case workerLabelValue:
+	if component, ok := pod.Labels[jupyterPodLabelKey]; ok && component == jupyterhubLabelValue {
+		return metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"component":                pod.Labels["component"],
+				"hub.jupyter.org/username": pod.Labels["hub.jupyter.org/username"],
+			},
+		}, nil
+	}
+
+	if _, ok := pod.Labels[airflowPodLabelKey]; ok {
 		return metav1.LabelSelector{
 			MatchLabels: map[string]string{
 				"run_id":  pod.Labels["run_id"],
@@ -280,16 +294,9 @@ func createPodSelector(pod corev1.Pod) (metav1.LabelSelector, error) {
 				"task_id": pod.Labels["task_id"],
 			},
 		}, nil
-	case jupyterhubLabelValue:
-		return metav1.LabelSelector{
-			MatchLabels: map[string]string{
-				"component":                pod.Labels["component"],
-				"hub.jupyter.org/username": pod.Labels["hub.jupyter.org/username"],
-			},
-		}, nil
-	default:
-		return metav1.LabelSelector{}, fmt.Errorf("invalid pod labels when creating network policy for pod %v", pod.Name)
 	}
+
+	return metav1.LabelSelector{}, fmt.Errorf("invalid pod labels when creating network policy for pod %v", pod.Name)
 }
 
 func (r *PodReconciler) defaultFQDNNetworkPolicyExists(ctx context.Context, namespace string) error {
