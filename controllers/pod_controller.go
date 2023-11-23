@@ -336,7 +336,10 @@ func (r *PodReconciler) defaultFQDNNetworkPolicyExists(ctx context.Context, name
 
 func createPortHostMap(hosts []string) (allowIPFQDN, error) {
 	ipRegex := regexp.MustCompile(`((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}`)
-	allow := allowIPFQDN{}
+	allow := allowIPFQDN{
+		IP:   make(map[int32][]string),
+		FQDN: make(map[int32][]string),
+	}
 
 	for _, hostPort := range hosts {
 		parts := strings.Split(hostPort, ":")
