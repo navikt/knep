@@ -262,8 +262,8 @@ func (r *PodReconciler) deleteNetpol(ctx context.Context, pod corev1.Pod) error 
 
 func isRelevantPod(podLabels map[string]string) bool {
 	// Check if Jupyter
-	if component, ok := podLabels[jupyterPodLabelKey]; ok {
-		return component == jupyterhubLabelValue
+	if component, ok := podLabels[jupyterPodLabelKey]; ok && component == jupyterhubLabelValue {
+		return true
 	}
 
 	// Check if Airflow
