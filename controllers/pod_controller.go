@@ -314,16 +314,15 @@ func createPortHostMap(hosts []string) (allowIPFQDN, error) {
 	for _, hostPort := range hosts {
 		parts := strings.Split(hostPort, ":")
 		host := parts[0]
-		port := parts[1]
-		if port == "" {
-			port = "443"
+		portInt := int32(443)
+		if len(parts) > 1 {
+			port := parts[1]
+			tmp, err := strconv.Atoi(port)
+			if err != nil {
+				return allowIPFQDN{}, err
+			}
+			portInt = int32(tmp)
 		}
-
-		tmp, err := strconv.Atoi(port)
-		if err != nil {
-			return allowIPFQDN{}, err
-		}
-		portInt := int32(tmp)
 
 		if ipRegex.MatchString(host) {
 			allow.IP[portInt] = append(allow.IP[portInt], host)
