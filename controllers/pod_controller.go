@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -35,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	networkingv1alpha3 "github.com/GoogleCloudPlatform/gke-fqdnnetworkpolicies-golang/api/v1alpha3"
+	networkingv1 "k8s.io/api/networking/v1"
 )
 
 // PodReconciler reconciles a Pod object
@@ -43,12 +45,18 @@ type PodReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+type allowIPFQDN struct {
+	IP   map[int32][]string
+	FQDN map[int32][]string
+}
+
 const (
 	labelKey                     = "component"
 	workerLabelValue             = "worker"
 	jupyterhubLabelValue         = "singleuser-server"
 	allowListAnnotationKey       = "allowlist"
 	defaultFQDNNetworkPolicyName = "airflow-worker-allow-fqdn"
+	conditionKneped              = "Kneped"
 )
 
 //+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch;create;update;patch;delete
@@ -88,17 +96,17 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	if !isRelevantPod(pod.Labels) {
 		return ctrl.Result{}, nil
 	}
+
 	if err := r.defaultFQDNNetworkPolicyExists(ctx, pod.Namespace); err != nil {
 		logger.Info("Ignoring namespace as default fqdn netpol does not exist")
 		return ctrl.Result{}, nil
 	}
 
-	allowListMap := extractAllowList(pod.Annotations)
-	if len(allowListMap) == 0 {
+	if _, ok := pod.Annotations[allowListAnnotationKey]; !ok {
 		return ctrl.Result{}, nil
 	}
 
-	if err := r.alterNetPol(ctx, pod, allowListMap); err != nil {
+	if err := r.alterNetpols(ctx, pod); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -112,40 +120,30 @@ func (r *PodReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *PodReconciler) alterNetPol(ctx context.Context, pod corev1.Pod, allowListMap map[string][]string) error {
-	logger := log.FromContext(ctx)
+func (r *PodReconciler) alterNetpols(ctx context.Context, pod corev1.Pod) error {
 	switch pod.Status.Phase {
 	case corev1.PodPending:
-		logger.Info("Creating netpol")
-		return r.createNetPol(ctx, pod, allowListMap)
+		return r.createNetpol(ctx, pod)
 	case corev1.PodSucceeded:
 		fallthrough
 	case corev1.PodFailed:
-		logger.Info("Removing netpol")
-		return r.deleteNetPol(ctx, pod)
+		return r.deleteNetpol(ctx, pod)
 	}
 	return nil
 }
 
-func (r *PodReconciler) createNetPol(ctx context.Context, pod corev1.Pod, allowListMap map[string][]string) error {
-	logger := log.FromContext(ctx)
-	fqdnNetworkPolicy := &networkingv1alpha3.FQDNNetworkPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      pod.Name,
-			Namespace: pod.Namespace,
-		},
+func (r *PodReconciler) createNetpol(ctx context.Context, pod corev1.Pod) error {
+	conditions := pod.Status.Conditions
+	for _, condition := range conditions {
+		if condition.Type == conditionKneped && condition.Status == corev1.ConditionTrue {
+			return nil
+		}
 	}
 
-	err := r.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, fqdnNetworkPolicy)
-	if err == nil {
-		logger.Info("FQDN netpol already exists")
-		return nil
-	}
-	if !apierrors.IsNotFound(err) {
-		return err
-	}
-
-	egressRules, err := createEgressRules(ctx, allowListMap)
+	allowList, _ := pod.Annotations[allowListAnnotationKey]
+	trimmedList := strings.ReplaceAll(allowList, " ", "")
+	hosts := strings.Split(trimmedList, ",")
+	allowStruct, err := createPortHostMap(hosts)
 	if err != nil {
 		return err
 	}
@@ -155,36 +153,114 @@ func (r *PodReconciler) createNetPol(ctx context.Context, pod corev1.Pod, allowL
 		return err
 	}
 
-	fqdnNetworkPolicy = &networkingv1alpha3.FQDNNetworkPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      pod.Name,
-			Namespace: pod.Namespace,
-		},
-		Spec: networkingv1alpha3.FQDNNetworkPolicySpec{
-			PodSelector: podSelector,
-			Egress:      egressRules,
-		},
+	objectMeta := metav1.ObjectMeta{
+		Name:      pod.Name,
+		Namespace: pod.Namespace,
 	}
 
+	networkPolicy, err := createNetworkPolicy(objectMeta, podSelector, allowStruct.IP)
+	if err != nil {
+		return err
+	}
+	if err := r.Create(ctx, networkPolicy); err != nil {
+		return err
+	}
+
+	fqdnNetworkPolicy, err := createFQDNNetworkPolicy(objectMeta, podSelector, allowStruct.FQDN)
+	if err != nil {
+		return err
+	}
 	if err := r.Create(ctx, fqdnNetworkPolicy); err != nil {
+		return err
+	}
+
+	pod.Status.Conditions = append(pod.Status.Conditions, corev1.PodCondition{
+		Type:   conditionKneped,
+		Status: corev1.ConditionTrue,
+	})
+	if err := r.Update(ctx, &pod); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (r *PodReconciler) deleteNetPol(ctx context.Context, pod corev1.Pod) error {
-	logger := log.FromContext(ctx)
+func createNetworkPolicy(objectMeta metav1.ObjectMeta, podSelector metav1.LabelSelector, portHostMap map[int32][]string) (*networkingV1.NetworkPolicy, error) {
+	egressRules := []networkingV1.NetworkPolicyEgressRule{}
+	for port, hosts := range portHostMap {
 
+		policyPeers := []networkingV1.NetworkPolicyPeer{}
+		for _, host := range hosts {
+			policyPeers = append(policyPeers, networkingV1.NetworkPolicyPeer{
+				IPBlock: &networkingV1.IPBlock{
+					CIDR: host,
+				},
+			})
+		}
+
+		egressRules = append(egressRules,
+			networkingV1.NetworkPolicyEgressRule{
+				To: policyPeers,
+				Ports: []networkingV1.NetworkPolicyPort{
+					{
+						Port: &intstr.IntOrString{IntVal: port},
+					},
+				},
+			})
+	}
+
+	return &networkingV1.NetworkPolicy{
+		ObjectMeta: objectMeta,
+		Spec: networkingV1.NetworkPolicySpec{
+			PodSelector: podSelector,
+			Egress:      egressRules,
+			PolicyTypes: []networkingV1.PolicyType{
+				networkingV1.PolicyTypeEgress,
+			},
+		},
+	}, nil
+}
+
+func createFQDNNetworkPolicy(objectMeta metav1.ObjectMeta, podSelector metav1.LabelSelector, portHostMap map[int32][]string) (*networkingv1alpha3.FQDNNetworkPolicy, error) {
+	egressRules := []networkingv1alpha3.FQDNNetworkPolicyEgressRule{}
+	for port, hosts := range portHostMap {
+		policyPeers := []networkingv1alpha3.FQDNNetworkPolicyPeer{
+			{
+				FQDNs: hosts,
+			},
+		}
+
+		egressRules = append(egressRules,
+			networkingv1alpha3.FQDNNetworkPolicyEgressRule{
+				To: policyPeers,
+				Ports: []networkingV1.NetworkPolicyPort{
+					{
+						Port: &intstr.IntOrString{IntVal: port},
+					},
+				},
+			})
+	}
+
+	objectMeta.Name = objectMeta.Name + "-fqdn"
+
+	return &networkingv1alpha3.FQDNNetworkPolicy{
+		ObjectMeta: objectMeta,
+		Spec: networkingv1alpha3.FQDNNetworkPolicySpec{
+			PodSelector: podSelector,
+			Egress:      egressRules,
+		},
+	}, nil
+}
+
+func (r *PodReconciler) deleteNetpol(ctx context.Context, pod corev1.Pod) error {
 	fqdnNetworkPolicy := &networkingv1alpha3.FQDNNetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      pod.Name,
+			Name:      pod.Name + "-fqdn",
 			Namespace: pod.Namespace,
 		},
 	}
 	if err := r.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, fqdnNetworkPolicy); err != nil {
 		if apierrors.IsNotFound(err) {
-			logger.Info("FQDNNetworkPolicy does not exists")
 			return nil
 		}
 
@@ -192,6 +268,24 @@ func (r *PodReconciler) deleteNetPol(ctx context.Context, pod corev1.Pod) error 
 	}
 
 	if err := r.Delete(ctx, fqdnNetworkPolicy); err != nil {
+		return err
+	}
+
+	networkPolicy := &networkingv1.NetworkPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      pod.Name,
+			Namespace: pod.Namespace,
+		},
+	}
+	if err := r.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, networkPolicy); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	if err := r.Delete(ctx, networkPolicy); err != nil {
 		return err
 	}
 
@@ -240,53 +334,30 @@ func (r *PodReconciler) defaultFQDNNetworkPolicyExists(ctx context.Context, name
 	return err
 }
 
-func extractAllowList(annotations map[string]string) map[string][]string {
-	if allowList, ok := annotations[allowListAnnotationKey]; ok {
-		trimmedList := strings.ReplaceAll(allowList, " ", "")
-		hosts := strings.Split(trimmedList, ",")
-		return createPortHostMap(hosts)
-	}
+func createPortHostMap(hosts []string) (allowIPFQDN, error) {
+	ipRegex := regexp.MustCompile(`((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}`)
+	allow := allowIPFQDN{}
 
-	return map[string][]string{}
-}
-
-func createPortHostMap(hosts []string) map[string][]string {
-	portHostMap := map[string][]string{}
-	for _, host := range hosts {
-		parts := strings.Split(host, ":")
-		if len(parts) > 1 {
-			portHostMap[parts[1]] = append(portHostMap[parts[1]], parts[0])
-		} else {
-			portHostMap["443"] = append(portHostMap["443"], parts[0])
+	for _, hostPort := range hosts {
+		parts := strings.Split(hostPort, ":")
+		host := parts[0]
+		port := parts[1]
+		if port == "" {
+			port = "443"
 		}
-	}
 
-	return portHostMap
-}
-
-func createEgressRules(ctx context.Context, portHostMap map[string][]string) ([]networkingv1alpha3.FQDNNetworkPolicyEgressRule, error) {
-	egressRules := []networkingv1alpha3.FQDNNetworkPolicyEgressRule{}
-	for port, hosts := range portHostMap {
-		portInt, err := strconv.Atoi(port)
+		tmp, err := strconv.Atoi(port)
 		if err != nil {
-			return nil, err
+			return allowIPFQDN{}, err
 		}
+		portInt := int32(tmp)
 
-		policyPeers := []networkingv1alpha3.FQDNNetworkPolicyPeer{
-			{
-				FQDNs: hosts,
-			},
+		if ipRegex.MatchString(host) {
+			allow.IP[portInt] = append(allow.IP[portInt], host)
+		} else {
+			allow.FQDN[portInt] = append(allow.FQDN[portInt], host)
 		}
-		egressRules = append(egressRules,
-			networkingv1alpha3.FQDNNetworkPolicyEgressRule{
-				To: policyPeers,
-				Ports: []networkingV1.NetworkPolicyPort{
-					{
-						Port: &intstr.IntOrString{IntVal: int32(portInt)},
-					},
-				},
-			})
 	}
 
-	return egressRules, nil
+	return allow, nil
 }
