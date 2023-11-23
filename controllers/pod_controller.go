@@ -163,7 +163,7 @@ func createNetworkPolicy(objectMeta metav1.ObjectMeta, podSelector metav1.LabelS
 		for _, host := range hosts {
 			policyPeers = append(policyPeers, networkingV1.NetworkPolicyPeer{
 				IPBlock: &networkingV1.IPBlock{
-					CIDR: host,
+					CIDR: host + "/32",
 				},
 			})
 		}
