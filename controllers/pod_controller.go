@@ -242,7 +242,8 @@ func (r *PodReconciler) defaultNetpolExists(ctx context.Context, namespace strin
 
 func extractAllowList(annotations map[string]string) map[string][]string {
 	if allowList, ok := annotations[allowListAnnotationKey]; ok {
-		hosts := strings.Split(allowList, ",")
+		trimmedList := strings.ReplaceAll(allowList, " ", "")
+		hosts := strings.Split(trimmedList, ",")
 		return createPortHostMap(hosts)
 	}
 
@@ -251,8 +252,8 @@ func extractAllowList(annotations map[string]string) map[string][]string {
 
 func createPortHostMap(hosts []string) map[string][]string {
 	portHostMap := map[string][]string{}
-	for _, h := range hosts {
-		parts := strings.Split(h, ":")
+	for _, host := range hosts {
+		parts := strings.Split(host, ":")
 		if len(parts) > 1 {
 			portHostMap[parts[1]] = append(portHostMap[parts[1]], parts[0])
 		} else {
