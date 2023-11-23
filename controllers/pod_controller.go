@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"strings"
 
+	networkingv1alpha3 "github.com/GoogleCloudPlatform/gke-fqdnnetworkpolicies-golang/api/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
-	networkingV1 "k8s.io/api/networking/v1"
-
+	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -18,9 +18,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	networkingv1alpha3 "github.com/GoogleCloudPlatform/gke-fqdnnetworkpolicies-golang/api/v1alpha3"
-	networkingv1 "k8s.io/api/networking/v1"
 )
 
 type PodReconciler struct {
@@ -156,23 +153,23 @@ func (r *PodReconciler) createNetpol(ctx context.Context, pod corev1.Pod) error 
 	return nil
 }
 
-func createNetworkPolicy(objectMeta metav1.ObjectMeta, podSelector metav1.LabelSelector, portHostMap map[int32][]string) (*networkingV1.NetworkPolicy, error) {
-	egressRules := []networkingV1.NetworkPolicyEgressRule{}
+func createNetworkPolicy(objectMeta metav1.ObjectMeta, podSelector metav1.LabelSelector, portHostMap map[int32][]string) (*networkingv1.NetworkPolicy, error) {
+	egressRules := []networkingv1.NetworkPolicyEgressRule{}
 	for port, hosts := range portHostMap {
 
-		policyPeers := []networkingV1.NetworkPolicyPeer{}
+		policyPeers := []networkingv1.NetworkPolicyPeer{}
 		for _, host := range hosts {
-			policyPeers = append(policyPeers, networkingV1.NetworkPolicyPeer{
-				IPBlock: &networkingV1.IPBlock{
+			policyPeers = append(policyPeers, networkingv1.NetworkPolicyPeer{
+				IPBlock: &networkingv1.IPBlock{
 					CIDR: host + "/32",
 				},
 			})
 		}
 
 		egressRules = append(egressRules,
-			networkingV1.NetworkPolicyEgressRule{
+			networkingv1.NetworkPolicyEgressRule{
 				To: policyPeers,
-				Ports: []networkingV1.NetworkPolicyPort{
+				Ports: []networkingv1.NetworkPolicyPort{
 					{
 						Port: &intstr.IntOrString{IntVal: port},
 					},
@@ -180,13 +177,13 @@ func createNetworkPolicy(objectMeta metav1.ObjectMeta, podSelector metav1.LabelS
 			})
 	}
 
-	return &networkingV1.NetworkPolicy{
+	return &networkingv1.NetworkPolicy{
 		ObjectMeta: objectMeta,
-		Spec: networkingV1.NetworkPolicySpec{
+		Spec: networkingv1.NetworkPolicySpec{
 			PodSelector: podSelector,
 			Egress:      egressRules,
-			PolicyTypes: []networkingV1.PolicyType{
-				networkingV1.PolicyTypeEgress,
+			PolicyTypes: []networkingv1.PolicyType{
+				networkingv1.PolicyTypeEgress,
 			},
 		},
 	}, nil
@@ -204,7 +201,7 @@ func createFQDNNetworkPolicy(objectMeta metav1.ObjectMeta, podSelector metav1.La
 		egressRules = append(egressRules,
 			networkingv1alpha3.FQDNNetworkPolicyEgressRule{
 				To: policyPeers,
-				Ports: []networkingV1.NetworkPolicyPort{
+				Ports: []networkingv1.NetworkPolicyPort{
 					{
 						Port: &intstr.IntOrString{IntVal: port},
 					},
