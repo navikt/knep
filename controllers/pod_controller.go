@@ -44,11 +44,11 @@ type PodReconciler struct {
 }
 
 const (
-	labelKey               = "component"
-	workerLabelValue       = "worker"
-	jupyterhubLabelValue   = "singleuser-server"
-	allowListAnnotationKey = "allowlist"
-	defaultNetpolName      = "airflow-worker-allow-fqdn"
+	labelKey                     = "component"
+	workerLabelValue             = "worker"
+	jupyterhubLabelValue         = "singleuser-server"
+	allowListAnnotationKey       = "allowlist"
+	defaultFQDNNetworkPolicyName = "airflow-worker-allow-fqdn"
 )
 
 //+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch;create;update;patch;delete
@@ -88,7 +88,7 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	if !isRelevantPod(pod.Labels) {
 		return ctrl.Result{}, nil
 	}
-	if err := r.defaultNetpolExists(ctx, pod.Namespace); err != nil {
+	if err := r.defaultFQDNNetworkPolicyExists(ctx, pod.Namespace); err != nil {
 		logger.Info("Ignoring namespace as default fqdn netpol does not exist")
 		return ctrl.Result{}, nil
 	}
@@ -129,14 +129,14 @@ func (r *PodReconciler) alterNetPol(ctx context.Context, pod corev1.Pod, allowLi
 
 func (r *PodReconciler) createNetPol(ctx context.Context, pod corev1.Pod, allowListMap map[string][]string) error {
 	logger := log.FromContext(ctx)
-	fqdnNetpol := &networkingv1alpha3.FQDNNetworkPolicy{
+	fqdnNetworkPolicy := &networkingv1alpha3.FQDNNetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      pod.Name,
 			Namespace: pod.Namespace,
 		},
 	}
 
-	err := r.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, fqdnNetpol)
+	err := r.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, fqdnNetworkPolicy)
 	if err == nil {
 		logger.Info("FQDN netpol already exists")
 		return nil
@@ -155,7 +155,7 @@ func (r *PodReconciler) createNetPol(ctx context.Context, pod corev1.Pod, allowL
 		return err
 	}
 
-	fqdnNetpol = &networkingv1alpha3.FQDNNetworkPolicy{
+	fqdnNetworkPolicy = &networkingv1alpha3.FQDNNetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      pod.Name,
 			Namespace: pod.Namespace,
@@ -166,7 +166,7 @@ func (r *PodReconciler) createNetPol(ctx context.Context, pod corev1.Pod, allowL
 		},
 	}
 
-	if err := r.Create(ctx, fqdnNetpol); err != nil {
+	if err := r.Create(ctx, fqdnNetworkPolicy); err != nil {
 		return err
 	}
 
@@ -176,22 +176,22 @@ func (r *PodReconciler) createNetPol(ctx context.Context, pod corev1.Pod, allowL
 func (r *PodReconciler) deleteNetPol(ctx context.Context, pod corev1.Pod) error {
 	logger := log.FromContext(ctx)
 
-	fqdnNetpol := &networkingv1alpha3.FQDNNetworkPolicy{
+	fqdnNetworkPolicy := &networkingv1alpha3.FQDNNetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      pod.Name,
 			Namespace: pod.Namespace,
 		},
 	}
-	if err := r.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, fqdnNetpol); err != nil {
+	if err := r.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, fqdnNetworkPolicy); err != nil {
 		if apierrors.IsNotFound(err) {
-			logger.Info("Netpol does not exists")
+			logger.Info("FQDNNetworkPolicy does not exists")
 			return nil
 		}
 
 		return err
 	}
 
-	if err := r.Delete(ctx, fqdnNetpol); err != nil {
+	if err := r.Delete(ctx, fqdnNetworkPolicy); err != nil {
 		return err
 	}
 
@@ -228,15 +228,15 @@ func createPodSelector(pod corev1.Pod) (metav1.LabelSelector, error) {
 	}
 }
 
-func (r *PodReconciler) defaultNetpolExists(ctx context.Context, namespace string) error {
-	fqdnNetpol := &networkingv1alpha3.FQDNNetworkPolicy{
+func (r *PodReconciler) defaultFQDNNetworkPolicyExists(ctx context.Context, namespace string) error {
+	fqdnNetworkPolicy := &networkingv1alpha3.FQDNNetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      defaultNetpolName,
+			Name:      defaultFQDNNetworkPolicyName,
 			Namespace: namespace,
 		},
 	}
 
-	err := r.Get(ctx, types.NamespacedName{Name: defaultNetpolName, Namespace: namespace}, fqdnNetpol)
+	err := r.Get(ctx, types.NamespacedName{Name: defaultFQDNNetworkPolicyName, Namespace: namespace}, fqdnNetworkPolicy)
 	return err
 }
 
