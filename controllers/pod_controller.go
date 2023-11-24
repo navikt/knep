@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -146,7 +147,10 @@ func (r *PodReconciler) createNetpol(ctx context.Context, pod corev1.Pod) error 
 		Status: corev1.ConditionTrue,
 	})
 
-	if err := r.SubResource("status").Update(ctx, &pod); err != nil {
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		return r.Status().Update(ctx, &pod)
+	})
+	if err != nil {
 		return err
 	}
 
