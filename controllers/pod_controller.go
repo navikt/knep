@@ -236,7 +236,7 @@ func (r *PodReconciler) deleteNetpol(ctx context.Context, pod corev1.Pod) error 
 			Namespace: pod.Namespace,
 		},
 	}
-	if err := r.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, fqdnNetworkPolicy); err != nil {
+	if err := r.Get(ctx, types.NamespacedName{Name: pod.Name + "-fqdn", Namespace: pod.Namespace}, fqdnNetworkPolicy); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
