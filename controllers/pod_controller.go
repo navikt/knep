@@ -146,7 +146,7 @@ func (r *PodReconciler) createNetpol(ctx context.Context, pod corev1.Pod) error 
 		Status: corev1.ConditionTrue,
 	})
 
-	if err := r.Status().Update(ctx, &pod); err != nil {
+	if err := r.SubResource("status").Update(ctx, &pod); err != nil {
 		return err
 	}
 
