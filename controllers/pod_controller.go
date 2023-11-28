@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -166,16 +167,18 @@ func (r *PodReconciler) createNetpol(ctx context.Context, pod corev1.Pod) error 
 }
 
 func (r *PodReconciler) updatePodStatus(ctx context.Context, pod corev1.Pod) error {
-	if err := r.Get(ctx, types.NamespacedName{Namespace: pod.Namespace, Name: pod.Name}, &pod); err != nil {
-		return err
-	}
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		if err := r.Get(ctx, types.NamespacedName{Namespace: pod.Namespace, Name: pod.Name}, &pod); err != nil {
+			return err
+		}
 
-	pod.Status.Conditions = append(pod.Status.Conditions, corev1.PodCondition{
-		Type:   conditionKneped,
-		Status: corev1.ConditionTrue,
+		pod.Status.Conditions = append(pod.Status.Conditions, corev1.PodCondition{
+			Type:   conditionKneped,
+			Status: corev1.ConditionTrue,
+		})
+
+		return r.Status().Update(ctx, &pod)
 	})
-
-	return r.Status().Update(ctx, &pod)
 }
 
 func createNetworkPolicy(objectMeta metav1.ObjectMeta, podSelector metav1.LabelSelector, portHostMap map[int32][]string) (*networkingv1.NetworkPolicy, error) {
