@@ -21,7 +21,7 @@ spec:
       containers:
       - name: knep
         image: europe-north1-docker.pkg.dev/knada-gcp/knada-north/knep
-        volumeMount:
+        volumeMounts:
           - name: onprem-firewall-map 
             mountPath: "/var/run"
       volumes:
