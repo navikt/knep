@@ -22,6 +22,7 @@ import (
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
+	"gopkg.in/yaml.v2"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	networkingv1alpha3 "github.com/GoogleCloudPlatform/gke-fqdnnetworkpolicies-golang/api/v1alpha3"
@@ -89,9 +90,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	oracleScanHosts, err := getOracleScanHosts()
+	if err != nil {
+		setupLog.Error(err, "unable to get oracle scan hosts from config")
+	}
+
 	if err = (&controllers.PodReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:          mgr.GetClient(),
+		OracleScanHosts: oracleScanHosts,
+		Scheme:          mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Pod")
 		os.Exit(1)
@@ -112,4 +119,25 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+func getOracleScanHosts() (map[string]controllers.OracleHost, error) {
+	dataBytes, err := os.ReadFile("/var/run/onprem-firewall.yaml")
+	if err != nil {
+		return nil, err
+	}
+
+	var hostMap controllers.Hosts
+	if err := yaml.Unmarshal(dataBytes, &hostMap); err != nil {
+		return nil, err
+	}
+
+	oracleScanHosts := map[string]controllers.OracleHost{}
+	for _, oracleHost := range hostMap.Oracle {
+		if len(oracleHost.Scan) > 0 {
+			oracleScanHosts[oracleHost.Host] = oracleHost
+		}
+	}
+
+	return oracleScanHosts, nil
 }

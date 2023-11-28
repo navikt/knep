@@ -20,9 +20,25 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
+type Host struct {
+	Host string `json:"host"`
+	Port int    `json:"port"`
+}
+
+type OracleHost struct {
+	Host string `json:"host"`
+	Port int    `json:"port"`
+	Scan []Host `json:"scan"`
+}
+
+type Hosts struct {
+	Oracle []OracleHost `json:"oracle"`
+}
+
 type PodReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	OracleScanHosts map[string]OracleHost
+	Scheme          *runtime.Scheme
 }
 
 type allowIPFQDN struct {
@@ -110,7 +126,7 @@ func (r *PodReconciler) createNetpol(ctx context.Context, pod corev1.Pod) error 
 	allowList := pod.Annotations[allowListAnnotationKey]
 	trimmedList := strings.ReplaceAll(allowList, " ", "")
 	hosts := strings.Split(trimmedList, ",")
-	allowStruct, err := createPortHostMap(hosts)
+	allowStruct, err := r.createPortHostMap(hosts)
 	if err != nil {
 		return err
 	}
@@ -318,7 +334,7 @@ func (r *PodReconciler) defaultFQDNNetworkPolicyExists(ctx context.Context, name
 	return err
 }
 
-func createPortHostMap(hosts []string) (allowIPFQDN, error) {
+func (r *PodReconciler) createPortHostMap(hosts []string) (allowIPFQDN, error) {
 	ipRegex := regexp.MustCompile(`((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}`)
 	allow := allowIPFQDN{
 		IP:   make(map[int32][]string),
@@ -342,6 +358,12 @@ func createPortHostMap(hosts []string) (allowIPFQDN, error) {
 			allow.IP[portInt] = append(allow.IP[portInt], host)
 		} else {
 			allow.FQDN[portInt] = append(allow.FQDN[portInt], host)
+
+			if scanHosts, ok := r.OracleScanHosts[host]; ok {
+				for _, scanHost := range scanHosts.Scan {
+					allow.FQDN[portInt] = append(allow.FQDN[portInt], scanHost.Host)
+				}
+			}
 		}
 	}
 
