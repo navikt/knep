@@ -26,7 +26,6 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	networkingv1alpha3 "github.com/GoogleCloudPlatform/gke-fqdnnetworkpolicies-golang/api/v1alpha3"
-	"github.com/mitchellh/mapstructure"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -128,21 +127,15 @@ func getOracleScanHosts() (map[string]controllers.OracleHost, error) {
 		return nil, err
 	}
 
-	var hostMap map[string][]any
+	var hostMap controllers.Hosts
 	if err := yaml.Unmarshal(dataBytes, &hostMap); err != nil {
 		return nil, err
 	}
 
 	oracleScanHosts := map[string]controllers.OracleHost{}
-	if oracleHosts, ok := hostMap["oracle"]; ok {
-		for _, oh := range oracleHosts {
-			oracleHost := controllers.OracleHost{}
-			if err := mapstructure.Decode(oh, &oracleHost); err != nil {
-				return nil, err
-			}
-			if len(oracleHost.Scan) > 0 {
-				oracleScanHosts[oracleHost.Host] = oracleHost
-			}
+	for _, oracleHost := range hostMap.Oracle {
+		if len(oracleHost.Scan) > 0 {
+			oracleScanHosts[oracleHost.Host] = oracleHost
 		}
 	}
 

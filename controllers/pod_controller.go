@@ -31,6 +31,10 @@ type OracleHost struct {
 	Scan []Host `json:"scan"`
 }
 
+type Hosts struct {
+	Oracle []OracleHost `json:"oracle"`
+}
+
 type PodReconciler struct {
 	client.Client
 	OracleScanHosts map[string]OracleHost
@@ -354,8 +358,9 @@ func (r *PodReconciler) createPortHostMap(hosts []string) (allowIPFQDN, error) {
 			allow.IP[portInt] = append(allow.IP[portInt], host)
 		} else {
 			allow.FQDN[portInt] = append(allow.FQDN[portInt], host)
-			if scanHosts, ok := r.getScanHosts(host); ok {
-				for _, scanHost := range scanHosts {
+
+			if scanHosts, ok := r.OracleScanHosts[host]; ok {
+				for _, scanHost := range scanHosts.Scan {
 					allow.FQDN[portInt] = append(allow.FQDN[portInt], scanHost.Host)
 				}
 			}
@@ -363,12 +368,4 @@ func (r *PodReconciler) createPortHostMap(hosts []string) (allowIPFQDN, error) {
 	}
 
 	return allow, nil
-}
-
-func (r *PodReconciler) getScanHosts(host string) ([]Host, bool) {
-	if scanHosts, ok := r.OracleScanHosts[host]; ok {
-		return scanHosts.Scan, true
-	}
-
-	return nil, false
 }
