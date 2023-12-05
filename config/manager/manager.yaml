@@ -15,7 +15,7 @@ spec:
       labels:
         app: knep
     spec:
-      serviceAccountName: knetpoller
+      serviceAccountName: knep
       imagePullSecrets:
       - name: ghcr-credentials
       containers:

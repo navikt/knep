@@ -5,8 +5,8 @@
 domain: knada.io
 layout:
 - go.kubebuilder.io/v3
-projectName: knetpoller
-repo: knada.io/knetpoller
+projectName: knep
+repo: knada.io/knep
 resources:
 - controller: true
   group: core

@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: knetpoller
+  name: knep
   namespace: system
 spec:
   template:

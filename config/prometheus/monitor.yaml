@@ -4,14 +4,14 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   labels:
-    control-plane: knetpoller
+    control-plane: knep
     app.kubernetes.io/name: servicemonitor
-    app.kubernetes.io/instance: knetpoller-metrics-monitor
+    app.kubernetes.io/instance: knep-metrics-monitor
     app.kubernetes.io/component: metrics
-    app.kubernetes.io/created-by: knetpoller
-    app.kubernetes.io/part-of: knetpoller
+    app.kubernetes.io/created-by: knep
+    app.kubernetes.io/part-of: knep
     app.kubernetes.io/managed-by: kustomize
-  name: knetpoller-metrics-monitor
+  name: knep-metrics-monitor
   namespace: system
 spec:
   endpoints:
@@ -23,4 +23,4 @@ spec:
         insecureSkipVerify: true
   selector:
     matchLabels:
-      control-plane: knetpoller
+      control-plane: knep

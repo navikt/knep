@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"cloud.google.com/go/bigquery"
 	networkingv1alpha3 "github.com/GoogleCloudPlatform/gke-fqdnnetworkpolicies-golang/api/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -39,6 +40,7 @@ type Hosts struct {
 type PodReconciler struct {
 	client.Client
 	OracleScanHosts map[string]OracleHost
+	BQClient        *bigquery.Client
 	Scheme          *runtime.Scheme
 }
 
@@ -157,11 +159,6 @@ func (r *PodReconciler) createNetpol(ctx context.Context, pod corev1.Pod) error 
 	if err := r.Create(ctx, fqdnNetworkPolicy); err != nil {
 		return err
 	}
-
-	pod.Status.Conditions = append(pod.Status.Conditions, corev1.PodCondition{
-		Type:   conditionKneped,
-		Status: corev1.ConditionTrue,
-	})
 
 	return r.updatePodStatus(ctx, pod)
 }

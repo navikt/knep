@@ -17,11 +17,13 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
+	"cloud.google.com/go/bigquery"
 	"gopkg.in/yaml.v2"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
@@ -33,7 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"knada.io/knetpoller/controllers"
+	"knada.io/knep/controllers"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -50,6 +52,7 @@ func init() {
 }
 
 func main() {
+	ctx := context.Background()
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
@@ -95,10 +98,16 @@ func main() {
 		setupLog.Error(err, "unable to get oracle scan hosts from config")
 	}
 
+	bqClient, err := bigquery.NewClient(ctx, bigquery.DetectProjectID)
+	if err != nil {
+		setupLog.Error(err, "unable to create bigquery client")
+	}
+
 	if err = (&controllers.PodReconciler{
 		Client:          mgr.GetClient(),
 		OracleScanHosts: oracleScanHosts,
 		Scheme:          mgr.GetScheme(),
+		BQClient:        bqClient,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Pod")
 		os.Exit(1)

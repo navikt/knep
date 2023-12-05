@@ -5,8 +5,8 @@ metadata:
     app.kubernetes.io/name: clusterrolebinding
     app.kubernetes.io/instance: manager-rolebinding
     app.kubernetes.io/component: rbac
-    app.kubernetes.io/created-by: knetpoller
-    app.kubernetes.io/part-of: knetpoller
+    app.kubernetes.io/created-by: knep
+    app.kubernetes.io/part-of: knep
     app.kubernetes.io/managed-by: kustomize
   name: manager-rolebinding
 roleRef:
@@ -15,5 +15,5 @@ roleRef:
   name: manager-role
 subjects:
 - kind: ServiceAccount
-  name: knetpoller
+  name: knep
   namespace: knada-system
