@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	networkingv1alpha3 "github.com/GoogleCloudPlatform/gke-fqdnnetworkpolicies-golang/api/v1alpha3"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -41,6 +42,7 @@ type PodReconciler struct {
 	OracleScanHosts map[string]OracleHost
 	BQClient        *BigQuery
 	Scheme          *runtime.Scheme
+	Log             logr.Logger
 }
 
 type allowIPFQDN struct {
@@ -157,6 +159,10 @@ func (r *PodReconciler) createNetpol(ctx context.Context, pod corev1.Pod) error 
 	}
 	if err := r.Create(ctx, fqdnNetworkPolicy); err != nil {
 		return err
+	}
+
+	if err := r.BQClient.persistAllowlistStats(ctx, allowStruct, pod); err != nil {
+		r.Log.Error(err, "persisting allowlist stats")
 	}
 
 	return r.updatePodStatus(ctx, pod)

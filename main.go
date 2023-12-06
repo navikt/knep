@@ -40,8 +40,9 @@ import (
 )
 
 var (
-	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup")
+	scheme        = runtime.NewScheme()
+	setupLog      = ctrl.Log.WithName("setup")
+	reconcilerlog = ctrl.Log.WithName("reconciler")
 )
 
 func init() {
@@ -114,6 +115,7 @@ func main() {
 		OracleScanHosts: oracleScanHosts,
 		Scheme:          mgr.GetScheme(),
 		BQClient:        bq,
+		Log:             reconcilerlog,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Pod")
 		os.Exit(1)
