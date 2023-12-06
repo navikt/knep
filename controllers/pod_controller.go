@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	"cloud.google.com/go/bigquery"
 	networkingv1alpha3 "github.com/GoogleCloudPlatform/gke-fqdnnetworkpolicies-golang/api/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -40,7 +39,7 @@ type Hosts struct {
 type PodReconciler struct {
 	client.Client
 	OracleScanHosts map[string]OracleHost
-	BQClient        *bigquery.Client
+	BQClient        *BigQuery
 	Scheme          *runtime.Scheme
 }
 

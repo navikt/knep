@@ -23,7 +23,7 @@ import (
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
-	"cloud.google.com/go/bigquery"
+
 	"gopkg.in/yaml.v2"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
@@ -56,8 +56,14 @@ func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
+	var statsProjectID string
+	var statsDatasetID string
+	var statsTableID string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.StringVar(&statsProjectID, "stats-bigquery-project", os.Getenv("BIGQUERY_PROJECT"), "The GCP project where allowlist statistics should be written")
+	flag.StringVar(&statsDatasetID, "stats-bigquery-dataset", os.Getenv("BIGQUERY_DATASET"), "The BigQuery dataset where allowlist statistics should be written")
+	flag.StringVar(&statsTableID, "stats-bigquery-table", os.Getenv("BIGQUERY_TABLE"), "The BigQuery dataset where allowlist statistics should be written")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -98,7 +104,7 @@ func main() {
 		setupLog.Error(err, "unable to get oracle scan hosts from config")
 	}
 
-	bqClient, err := bigquery.NewClient(ctx, bigquery.DetectProjectID)
+	bq, err := controllers.NewBigQuery(ctx, statsProjectID, statsDatasetID, statsTableID)
 	if err != nil {
 		setupLog.Error(err, "unable to create bigquery client")
 	}
@@ -107,7 +113,7 @@ func main() {
 		Client:          mgr.GetClient(),
 		OracleScanHosts: oracleScanHosts,
 		Scheme:          mgr.GetScheme(),
-		BQClient:        bqClient,
+		BQClient:        bq,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Pod")
 		os.Exit(1)

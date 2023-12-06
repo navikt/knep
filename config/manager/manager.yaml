@@ -16,6 +16,13 @@ spec:
         app: knep
     spec:
       serviceAccountName: knep
+      env:
+        - name: BIGQUERY_PROJECT
+          value: nada-prod-6977
+        - name: BIGQUERY_DATASET
+          value: knep
+        - name: BIGQUERY_TABLE
+          value: allowlist_stats
       imagePullSecrets:
       - name: ghcr-credentials
       containers:
