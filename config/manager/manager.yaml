@@ -16,17 +16,17 @@ spec:
         app: knep
     spec:
       serviceAccountName: knep
-      env:
-        - name: BIGQUERY_PROJECT
-          value: nada-prod-6977
-        - name: BIGQUERY_DATASET
-          value: knep
-        - name: BIGQUERY_TABLE
-          value: allowlist_stats
       imagePullSecrets:
       - name: ghcr-credentials
       containers:
       - name: knep
+        env:
+          - name: BIGQUERY_PROJECT
+            value: nada-prod-6977
+          - name: BIGQUERY_DATASET
+            value: knep
+          - name: BIGQUERY_TABLE
+            value: allowlist_stats
         image: europe-north1-docker.pkg.dev/knada-gcp/knada-north/knep
         volumeMounts:
           - name: onprem-firewall-map 
