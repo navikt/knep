@@ -35,10 +35,11 @@ func NewBigQuery(ctx context.Context, projectID, datasetID, tableID string) (*Bi
 
 func createAllowlistStatsTableIfNotExists(ctx context.Context, bqClient *bigquery.Client, projectID, datasetID, tableID string) error {
 	schema := bigquery.Schema{
+		{Name: "team", Type: bigquery.StringFieldType},
 		{Name: "namespace", Type: bigquery.StringFieldType},
 		{Name: "service", Type: bigquery.StringFieldType},
-		{Name: "allowlist", Type: bigquery.StringFieldType, Repeated: true},
-		{Name: "time", Type: bigquery.TimestampFieldType},
+		{Name: "allowlist", Type: bigquery.JSONFieldType},
+		{Name: "created_at", Type: bigquery.TimestampFieldType},
 	}
 
 	metadata := &bigquery.TableMetadata{
