@@ -114,6 +114,7 @@ func main() {
 		OracleScanHosts: oracleScanHosts,
 		Scheme:          mgr.GetScheme(),
 		BQClient:        bq,
+		Log:             ctrl.Log.WithName("reconciler"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Pod")
 		os.Exit(1)

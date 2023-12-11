@@ -2,17 +2,28 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"cloud.google.com/go/bigquery"
 	"google.golang.org/api/googleapi"
+	corev1 "k8s.io/api/core/v1"
 )
 
 type BigQuery struct {
-	Client        *bigquery.Client
-	DestProjectID string
-	DestDatasetID string
-	DestTableID   string
+	client        *bigquery.Client
+	destProjectID string
+	destDatasetID string
+	destTableID   string
+}
+
+type allowListTableEntry struct {
+	PodName   string                 `json:"podname"`
+	Team      string                 `json:"team"`
+	Namespace string                 `json:"namespace"`
+	Service   string                 `json:"service"`
+	Allowlist bigquery.NullJSON      `json:"allowlist"`
+	Created   bigquery.NullTimestamp `json:"created"`
 }
 
 func NewBigQuery(ctx context.Context, projectID, datasetID, tableID string) (*BigQuery, error) {
@@ -26,20 +37,21 @@ func NewBigQuery(ctx context.Context, projectID, datasetID, tableID string) (*Bi
 	}
 
 	return &BigQuery{
-		Client:        bqClient,
-		DestProjectID: projectID,
-		DestDatasetID: datasetID,
-		DestTableID:   tableID,
+		client:        bqClient,
+		destProjectID: projectID,
+		destDatasetID: datasetID,
+		destTableID:   tableID,
 	}, nil
 }
 
 func createAllowlistStatsTableIfNotExists(ctx context.Context, bqClient *bigquery.Client, projectID, datasetID, tableID string) error {
 	schema := bigquery.Schema{
+		{Name: "created", Type: bigquery.TimestampFieldType, Required: true},
+		{Name: "podname", Type: bigquery.StringFieldType, Required: true},
+		{Name: "namespace", Type: bigquery.StringFieldType, Required: true},
 		{Name: "team", Type: bigquery.StringFieldType},
-		{Name: "namespace", Type: bigquery.StringFieldType},
 		{Name: "service", Type: bigquery.StringFieldType},
 		{Name: "allowlist", Type: bigquery.JSONFieldType},
-		{Name: "created_at", Type: bigquery.TimestampFieldType},
 	}
 
 	metadata := &bigquery.TableMetadata{
@@ -57,4 +69,47 @@ func createAllowlistStatsTableIfNotExists(ctx context.Context, bqClient *bigquer
 	}
 
 	return nil
+}
+
+func (bq *BigQuery) persistAllowlistStats(ctx context.Context, allowStruct allowIPFQDN, pod corev1.Pod) error {
+	table := bq.client.DatasetInProject(bq.destProjectID, bq.destDatasetID).Table(bq.destTableID)
+
+	allowBytes, err := json.Marshal(allowStruct)
+	if err != nil {
+		return err
+	}
+
+	team, namespace := getTeamAndNamespaceFromPodSpec(pod)
+	tableEntry := allowListTableEntry{
+		PodName:   pod.Name,
+		Team:      team,
+		Namespace: namespace,
+		Service:   getServiceTypeFromPodSpec(pod),
+		Allowlist: bigquery.NullJSON{JSONVal: string(allowBytes), Valid: string(allowBytes) != ""},
+		Created:   bigquery.NullTimestamp{Timestamp: pod.CreationTimestamp.Time, Valid: true},
+	}
+
+	inserter := table.Inserter()
+	return inserter.Put(ctx, tableEntry)
+}
+
+func getTeamAndNamespaceFromPodSpec(pod corev1.Pod) (string, string) {
+	team := ""
+	if teamValue, ok := pod.Labels["team"]; ok {
+		team = teamValue
+	}
+
+	return team, pod.Namespace
+}
+
+func getServiceTypeFromPodSpec(pod corev1.Pod) string {
+	if serviceType, ok := pod.Labels["app"]; ok && serviceType == "jupyterhub" {
+		return serviceType
+	}
+
+	if serviceType, ok := pod.Labels["release"]; ok && serviceType == "airflow" {
+		return serviceType
+	}
+
+	return ""
 }
