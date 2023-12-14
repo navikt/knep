@@ -1,4 +1,4 @@
-package controllers
+package bigquery
 
 import (
 	"context"
@@ -26,7 +26,7 @@ type allowListTableEntry struct {
 	Created   bigquery.NullTimestamp `json:"created"`
 }
 
-func NewBigQuery(ctx context.Context, projectID, datasetID, tableID string) (*BigQuery, error) {
+func New(ctx context.Context, projectID, datasetID, tableID string) (*BigQuery, error) {
 	bqClient, err := bigquery.NewClient(ctx, bigquery.DetectProjectID)
 	if err != nil {
 		return nil, err
@@ -71,7 +71,7 @@ func createAllowlistStatsTableIfNotExists(ctx context.Context, bqClient *bigquer
 	return nil
 }
 
-func (bq *BigQuery) persistAllowlistStats(ctx context.Context, allowStruct allowIPFQDN, pod corev1.Pod) error {
+func (bq *BigQuery) PersistAllowlistStats(ctx context.Context, allowStruct any, pod corev1.Pod) error {
 	table := bq.client.DatasetInProject(bq.destProjectID, bq.destDatasetID).Table(bq.destTableID)
 
 	allowBytes, err := json.Marshal(allowStruct)

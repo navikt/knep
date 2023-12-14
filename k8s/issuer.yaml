@@ -1,0 +1,9 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: knep-issuer
+  namespace: knada-system
+  labels:
+    app.kubernetes.io/name: knep
+spec:
+  selfSigned: {}
