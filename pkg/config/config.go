@@ -5,5 +5,6 @@ type Config struct {
 	StatsProjectID string
 	StatsDatasetID string
 	StatsTableID   string
+	CertPath       string
 	InCluster      bool
 }

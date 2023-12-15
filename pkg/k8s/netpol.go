@@ -50,7 +50,8 @@ func (k *K8SClient) AlterNetpol(ctx context.Context, admissionRequest *v1beta1.A
 			return err
 		}
 	default:
-		return fmt.Errorf("unsupported request operation %v", admissionRequest.Operation)
+		k.logger.Info("unsupported request operation %v", admissionRequest.Operation)
+		return nil
 	}
 
 	if !isRelevantPod(pod.Labels) {
@@ -91,7 +92,7 @@ func (k *K8SClient) createNetpol(ctx context.Context, pod corev1.Pod) error {
 		return err
 	}
 
-	if err := k.createOrUpdateFQDNNetworkPolicy(ctx, objectMeta, podSelector, allowStruct.FQDN); err != nil {
+	if err := k.createOrReplaceFQDNNetworkPolicy(ctx, objectMeta, podSelector, allowStruct.FQDN); err != nil {
 		return err
 	}
 
@@ -103,6 +104,10 @@ func (k *K8SClient) createNetpol(ctx context.Context, pod corev1.Pod) error {
 }
 
 func (k *K8SClient) createOrUpdateNetworkPolicy(ctx context.Context, objectMeta metav1.ObjectMeta, podSelector metav1.LabelSelector, portHostMap map[int32][]string) error {
+	if len(portHostMap) == 0 {
+		return nil
+	}
+
 	networkPolicy, err := createNetworkPolicy(objectMeta, podSelector, portHostMap)
 	if err != nil {
 		return err
@@ -122,7 +127,11 @@ func (k *K8SClient) createOrUpdateNetworkPolicy(ctx context.Context, objectMeta 
 	return nil
 }
 
-func (k *K8SClient) createOrUpdateFQDNNetworkPolicy(ctx context.Context, objectMeta metav1.ObjectMeta, podSelector metav1.LabelSelector, portHostMap map[int32][]string) error {
+func (k *K8SClient) createOrReplaceFQDNNetworkPolicy(ctx context.Context, objectMeta metav1.ObjectMeta, podSelector metav1.LabelSelector, portHostMap map[int32][]string) error {
+	if len(portHostMap) == 0 {
+		return nil
+	}
+
 	objectMeta.Name += "-fqdn"
 	fqdnNetpolResource := schema.GroupVersionResource{
 		Group:    "networking.gke.io",

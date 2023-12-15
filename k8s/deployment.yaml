@@ -27,7 +27,9 @@ spec:
             value: knep
           - name: BIGQUERY_TABLE
             value: allowlist_historic
-        image: ghcr.io/navikt/knada-images/test-image:v32
+          - name: CERT_PATH
+            value: /run/secrets/tls
+        image: europe-north1-docker.pkg.dev/knada-gcp/knada-north/knep
         volumeMounts:
           - name: webhook-server-cert
             mountPath: /run/secrets/tls
