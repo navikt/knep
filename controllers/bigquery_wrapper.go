@@ -79,11 +79,10 @@ func (bq *BigQuery) persistAllowlistStats(ctx context.Context, allowStruct allow
 		return err
 	}
 
-	team, namespace := getTeamAndNamespaceFromPodSpec(pod)
 	tableEntry := allowListTableEntry{
 		PodName:   pod.Name,
-		Team:      team,
-		Namespace: namespace,
+		Team:      pod.Spec.ServiceAccountName,
+		Namespace: pod.Namespace,
 		Service:   getServiceTypeFromPodSpec(pod),
 		Allowlist: bigquery.NullJSON{JSONVal: string(allowBytes), Valid: string(allowBytes) != ""},
 		Created:   bigquery.NullTimestamp{Timestamp: pod.CreationTimestamp.Time, Valid: true},
@@ -91,15 +90,6 @@ func (bq *BigQuery) persistAllowlistStats(ctx context.Context, allowStruct allow
 
 	inserter := table.Inserter()
 	return inserter.Put(ctx, tableEntry)
-}
-
-func getTeamAndNamespaceFromPodSpec(pod corev1.Pod) (string, string) {
-	team := ""
-	if teamValue, ok := pod.Labels["team"]; ok {
-		team = teamValue
-	}
-
-	return team, pod.Namespace
 }
 
 func getServiceTypeFromPodSpec(pod corev1.Pod) string {
