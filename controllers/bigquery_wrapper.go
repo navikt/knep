@@ -97,8 +97,8 @@ func getServiceTypeFromPodSpec(pod corev1.Pod) string {
 		return serviceType
 	}
 
-	if serviceType, ok := pod.Labels["release"]; ok && serviceType == "airflow" {
-		return serviceType
+	if _, ok := pod.Labels["dag_id"]; ok {
+		return "airflow"
 	}
 
 	return ""
