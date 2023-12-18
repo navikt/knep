@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/navikt/knep/pkg/bigquery"
-	"gopkg.in/yaml.v2"
+	"github.com/navikt/knep/pkg/hostmap"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -14,30 +14,15 @@ import (
 	"k8s.io/client-go/util/homedir"
 )
 
-type Host struct {
-	Host string `json:"host"`
-	Port int    `json:"port"`
-}
-
-type OracleHost struct {
-	Host string `json:"host"`
-	Port int    `json:"port"`
-	Scan []Host `json:"scan"`
-}
-
-type Hosts struct {
-	Oracle []OracleHost `json:"oracle"`
-}
-
 type K8SClient struct {
-	oracleScanHosts map[string]OracleHost
-	client          *kubernetes.Clientset
-	dynamicClient   *dynamic.DynamicClient
-	bigqueryClient  *bigquery.BigQuery
-	logger          *slog.Logger
+	hostMap        *hostmap.HostMap
+	client         *kubernetes.Clientset
+	dynamicClient  *dynamic.DynamicClient
+	bigqueryClient *bigquery.BigQuery
+	logger         *slog.Logger
 }
 
-func New(inCluster bool, onpremFirewallPath string, bigqueryClient *bigquery.BigQuery, logger *slog.Logger) (*K8SClient, error) {
+func New(inCluster bool, hostMap *hostmap.HostMap, bigqueryClient *bigquery.BigQuery, logger *slog.Logger) (*K8SClient, error) {
 	client, err := createClientset(inCluster)
 	if err != nil {
 		return nil, err
@@ -48,17 +33,12 @@ func New(inCluster bool, onpremFirewallPath string, bigqueryClient *bigquery.Big
 		return nil, err
 	}
 
-	oracleScanHosts, err := getOracleScanHosts(onpremFirewallPath)
-	if err != nil {
-		return nil, err
-	}
-
 	return &K8SClient{
-		oracleScanHosts: oracleScanHosts,
-		client:          client,
-		dynamicClient:   dynamicClient,
-		bigqueryClient:  bigqueryClient,
-		logger:          logger,
+		hostMap:        hostMap,
+		client:         client,
+		dynamicClient:  dynamicClient,
+		bigqueryClient: bigqueryClient,
+		logger:         logger,
 	}, nil
 }
 
@@ -95,25 +75,4 @@ func createKubeConfig(inCluster bool) (*rest.Config, error) {
 	configOverrides := &clientcmd.ConfigOverrides{CurrentContext: "minikube"}
 
 	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(configLoadingRules, configOverrides).ClientConfig()
-}
-
-func getOracleScanHosts(onpremFirewallPath string) (map[string]OracleHost, error) {
-	dataBytes, err := os.ReadFile(onpremFirewallPath)
-	if err != nil {
-		return nil, err
-	}
-
-	var hostMap Hosts
-	if err := yaml.Unmarshal(dataBytes, &hostMap); err != nil {
-		return nil, err
-	}
-
-	oracleScanHosts := map[string]OracleHost{}
-	for _, oracleHost := range hostMap.Oracle {
-		if len(oracleHost.Scan) > 0 {
-			oracleScanHosts[oracleHost.Host] = oracleHost
-		}
-	}
-
-	return oracleScanHosts, nil
 }

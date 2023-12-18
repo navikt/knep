@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -18,11 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
-
-type AllowIPFQDN struct {
-	IP   map[int32][]string
-	FQDN map[int32][]string
-}
 
 var fqdnNetpolResource = schema.GroupVersionResource{
 	Group:    "networking.gke.io",
@@ -75,7 +68,7 @@ func (k *K8SClient) createNetpol(ctx context.Context, pod corev1.Pod) error {
 	allowList := pod.Annotations[allowListAnnotationKey]
 	trimmedList := strings.ReplaceAll(allowList, " ", "")
 	hosts := strings.Split(trimmedList, ",")
-	hostMap, err := k.createPortHostMap(hosts)
+	hostMap, err := k.hostMap.CreatePortHostMap(hosts)
 	if err != nil {
 		return err
 	}
@@ -304,40 +297,4 @@ func (k *K8SClient) defaultFQDNNetworkPolicyExists(ctx context.Context, namespac
 	}
 
 	return nil
-}
-
-func (k *K8SClient) createPortHostMap(hosts []string) (AllowIPFQDN, error) {
-	ipRegex := regexp.MustCompile(`((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}`)
-	allow := AllowIPFQDN{
-		IP:   make(map[int32][]string),
-		FQDN: make(map[int32][]string),
-	}
-
-	for _, hostPort := range hosts {
-		parts := strings.Split(hostPort, ":")
-		host := parts[0]
-		portInt := int32(443)
-		if len(parts) > 1 {
-			port := parts[1]
-			tmp, err := strconv.Atoi(port)
-			if err != nil {
-				return AllowIPFQDN{}, err
-			}
-			portInt = int32(tmp)
-		}
-
-		if ipRegex.MatchString(host) {
-			allow.IP[portInt] = append(allow.IP[portInt], host)
-		} else {
-			allow.FQDN[portInt] = append(allow.FQDN[portInt], host)
-
-			if scanHosts, ok := k.oracleScanHosts[host]; ok {
-				for _, scanHost := range scanHosts.Scan {
-					allow.FQDN[portInt] = append(allow.FQDN[portInt], scanHost.Host)
-				}
-			}
-		}
-	}
-
-	return allow, nil
 }
