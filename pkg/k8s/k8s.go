@@ -57,7 +57,5 @@ func createKubeConfig(inCluster bool) (*rest.Config, error) {
 		kubeconfig = filepath.Join(homedir.HomeDir(), ".kube", "config")
 	}
 
-	configLoadingRules := &clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfig}
-
-	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(configLoadingRules, &clientcmd.ConfigOverrides{}).ClientConfig()
+	return clientcmd.BuildConfigFromFlags("", kubeconfig)
 }
