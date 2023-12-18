@@ -65,11 +65,13 @@ func (a *AdmissionHandler) Validate(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		a.logger.Error("reading request body", "error", err)
+		return
 	}
 
 	var review v1beta1.AdmissionReview
 	if err := json.Unmarshal(body, &review); err != nil {
 		a.logger.Error("unmarshalling admission request", "error", err)
+		return
 	}
 
 	if err := a.k8sClient.AlterNetpol(r.Context(), review.Request); err == nil {
