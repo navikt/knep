@@ -142,8 +142,7 @@ func (k *K8SClient) createOrReplaceFQDNNetworkPolicy(ctx context.Context, object
 
 	_, err = k.dynamicClient.Resource(fqdnNetpolResource).Namespace(objectMeta.Namespace).Get(ctx, objectMeta.Name, metav1.GetOptions{})
 	if err == nil {
-		err := k.dynamicClient.Resource(fqdnNetpolResource).Namespace(objectMeta.Namespace).Delete(ctx, objectMeta.Name, metav1.DeleteOptions{})
-		if err != nil {
+		if err := k.dynamicClient.Resource(fqdnNetpolResource).Namespace(objectMeta.Namespace).Delete(ctx, objectMeta.Name, metav1.DeleteOptions{}); err != nil {
 			return err
 		}
 	} else if err != nil && !apierrors.IsNotFound(err) {
