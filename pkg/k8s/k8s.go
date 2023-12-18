@@ -23,12 +23,17 @@ type K8SClient struct {
 }
 
 func New(inCluster bool, hostMap *hostmap.HostMap, bigqueryClient *bigquery.BigQuery, logger *slog.Logger) (*K8SClient, error) {
-	client, err := createClientset(inCluster)
+	config, err := createKubeConfig(inCluster)
 	if err != nil {
 		return nil, err
 	}
 
-	dynamicClient, err := createDynamicClient(inCluster)
+	client, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	dynamicClient, err := dynamic.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
@@ -42,24 +47,6 @@ func New(inCluster bool, hostMap *hostmap.HostMap, bigqueryClient *bigquery.BigQ
 	}, nil
 }
 
-func createClientset(inCluster bool) (*kubernetes.Clientset, error) {
-	config, err := createKubeConfig(inCluster)
-	if err != nil {
-		return nil, err
-	}
-
-	return kubernetes.NewForConfig(config)
-}
-
-func createDynamicClient(inCluster bool) (*dynamic.DynamicClient, error) {
-	config, err := createKubeConfig(inCluster)
-	if err != nil {
-		return nil, err
-	}
-
-	return dynamic.NewForConfig(config)
-}
-
 func createKubeConfig(inCluster bool) (*rest.Config, error) {
 	if inCluster {
 		return rest.InClusterConfig()
@@ -71,8 +58,6 @@ func createKubeConfig(inCluster bool) (*rest.Config, error) {
 	}
 
 	configLoadingRules := &clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfig}
-	// TODO: Virker ikke som at man får satt context på denne måten
-	configOverrides := &clientcmd.ConfigOverrides{CurrentContext: "minikube"}
 
-	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(configLoadingRules, configOverrides).ClientConfig()
+	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(configLoadingRules, &clientcmd.ConfigOverrides{}).ClientConfig()
 }
