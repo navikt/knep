@@ -134,15 +134,14 @@ func (k *K8SClient) createOrReplaceFQDNNetworkPolicy(ctx context.Context, object
 		return nil
 	}
 
-	objectMeta.Name += "-fqdn"
 	fqdnNetworkPolicy, err := createFQDNNetworkPolicy(objectMeta, podSelector, portHostMap)
 	if err != nil {
 		return err
 	}
 
-	_, err = k.dynamicClient.Resource(fqdnNetpolResource).Namespace(objectMeta.Namespace).Get(ctx, objectMeta.Name, metav1.GetOptions{})
+	_, err = k.dynamicClient.Resource(fqdnNetpolResource).Namespace(objectMeta.Namespace).Get(ctx, fqdnNetworkPolicy.GetName(), metav1.GetOptions{})
 	if err == nil {
-		if err := k.dynamicClient.Resource(fqdnNetpolResource).Namespace(objectMeta.Namespace).Delete(ctx, objectMeta.Name, metav1.DeleteOptions{}); err != nil {
+		if err := k.dynamicClient.Resource(fqdnNetpolResource).Namespace(objectMeta.Namespace).Delete(ctx, fqdnNetworkPolicy.GetName(), metav1.DeleteOptions{}); err != nil {
 			return err
 		}
 	} else if err != nil && !apierrors.IsNotFound(err) {
@@ -244,7 +243,7 @@ func createFQDNNetworkPolicy(objectMeta metav1.ObjectMeta, podSelector metav1.La
 		"apiVersion": "networking.gke.io/v1alpha3",
 		"kind":       "FQDNNetworkPolicy",
 		"metadata": map[string]any{
-			"name":      objectMeta.Name,
+			"name":      objectMeta.Name + "-fqdn",
 			"namespace": objectMeta.Namespace,
 		},
 		"spec": map[string]any{
