@@ -5,11 +5,10 @@ import (
 	"log/slog"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/navikt/knep/pkg/config"
 )
 
-func New(ctx context.Context, cfg config.Config, logger *slog.Logger) (*chi.Mux, error) {
-	admissionHandler, err := NewAdmissionHandler(ctx, cfg, logger)
+func New(ctx context.Context, incluster bool, stats StatsSink, logger *slog.Logger) (*chi.Mux, error) {
+	admissionHandler, err := NewAdmissionHandler(ctx, incluster, stats, logger)
 	if err != nil {
 		return nil, err
 	}

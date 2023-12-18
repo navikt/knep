@@ -8,12 +8,17 @@ import (
 	"net/http"
 
 	"github.com/navikt/knep/pkg/bigquery"
-	"github.com/navikt/knep/pkg/config"
 	"github.com/navikt/knep/pkg/k8s"
 	"k8s.io/api/admission/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
+
+type StatsSink struct {
+	ProjectID string
+	DatasetID string
+	TableID   string
+}
 
 type Host struct {
 	Host string `json:"host"`
@@ -31,28 +36,26 @@ type Hosts struct {
 }
 
 type AdmissionHandler struct {
-	cfg       config.Config
 	decoder   runtime.Decoder
 	bqClient  *bigquery.BigQuery
 	k8sClient *k8s.K8SClient
 	logger    *slog.Logger
 }
 
-func NewAdmissionHandler(ctx context.Context, cfg config.Config, logger *slog.Logger) (*AdmissionHandler, error) {
-	bqClient, err := bigquery.New(ctx, cfg.StatsProjectID, cfg.StatsDatasetID, cfg.StatsTableID)
+func NewAdmissionHandler(ctx context.Context, inCluster bool, stats StatsSink, logger *slog.Logger) (*AdmissionHandler, error) {
+	bqClient, err := bigquery.New(ctx, stats.ProjectID, stats.DatasetID, stats.TableID)
 	if err != nil {
 		logger.Error("creating bigquery client", "error", err)
 		return nil, err
 	}
 
-	k8sClient, err := k8s.New(cfg.InCluster, bqClient, logger)
+	k8sClient, err := k8s.New(inCluster, bqClient, logger)
 	if err != nil {
 		logger.Error("creating k8s client", "error", err)
 		return nil, err
 	}
 
 	return &AdmissionHandler{
-		cfg:       cfg,
 		k8sClient: k8sClient,
 		logger:    logger,
 	}, nil
