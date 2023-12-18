@@ -72,8 +72,7 @@ func (a *AdmissionHandler) Validate(w http.ResponseWriter, r *http.Request) {
 		a.logger.Error("unmarshalling admission request", "error", err)
 	}
 
-	err = a.k8sClient.AlterNetpol(r.Context(), review.Request)
-	if err == nil {
+	if err := a.k8sClient.AlterNetpol(r.Context(), review.Request); err == nil {
 		review.Response = &v1beta1.AdmissionResponse{
 			Allowed: true,
 			UID:     review.Request.UID,
