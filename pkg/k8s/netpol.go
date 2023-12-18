@@ -75,7 +75,7 @@ func (k *K8SClient) createNetpol(ctx context.Context, pod corev1.Pod) error {
 	allowList := pod.Annotations[allowListAnnotationKey]
 	trimmedList := strings.ReplaceAll(allowList, " ", "")
 	hosts := strings.Split(trimmedList, ",")
-	allowStruct, err := k.createPortHostMap(hosts)
+	hostMap, err := k.createPortHostMap(hosts)
 	if err != nil {
 		return err
 	}
@@ -90,15 +90,15 @@ func (k *K8SClient) createNetpol(ctx context.Context, pod corev1.Pod) error {
 		Namespace: pod.Namespace,
 	}
 
-	if err := k.createOrUpdateNetworkPolicy(ctx, objectMeta, podSelector, allowStruct.IP); err != nil {
+	if err := k.createOrUpdateNetworkPolicy(ctx, objectMeta, podSelector, hostMap.IP); err != nil {
 		return err
 	}
 
-	if err := k.createOrReplaceFQDNNetworkPolicy(ctx, objectMeta, podSelector, allowStruct.FQDN); err != nil {
+	if err := k.createOrReplaceFQDNNetworkPolicy(ctx, objectMeta, podSelector, hostMap.FQDN); err != nil {
 		return err
 	}
 
-	if err := k.bigqueryClient.PersistAllowlistStats(ctx, allowStruct, pod); err != nil {
+	if err := k.bigqueryClient.PersistAllowlistStats(ctx, hostMap, pod); err != nil {
 		k.logger.Error("persisting allowlist stats", "error", err)
 	}
 
