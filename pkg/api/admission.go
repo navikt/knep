@@ -20,21 +20,6 @@ type StatsSink struct {
 	TableID   string
 }
 
-type Host struct {
-	Host string `json:"host"`
-	Port int    `json:"port"`
-}
-
-type OracleHost struct {
-	Host string `json:"host"`
-	Port int    `json:"port"`
-	Scan []Host `json:"scan"`
-}
-
-type Hosts struct {
-	Oracle []OracleHost `json:"oracle"`
-}
-
 type AdmissionHandler struct {
 	decoder   runtime.Decoder
 	bqClient  *bigquery.BigQuery
