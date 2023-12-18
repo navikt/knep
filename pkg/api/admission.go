@@ -1,4 +1,4 @@
-package handlers
+package api
 
 import (
 	"context"
@@ -38,7 +38,7 @@ type AdmissionHandler struct {
 	logger    *slog.Logger
 }
 
-func New(ctx context.Context, cfg config.Config, logger *slog.Logger) (*AdmissionHandler, error) {
+func NewAdmissionHandler(ctx context.Context, cfg config.Config, logger *slog.Logger) (*AdmissionHandler, error) {
 	bqClient, err := bigquery.New(ctx, cfg.StatsProjectID, cfg.StatsDatasetID, cfg.StatsTableID)
 	if err != nil {
 		logger.Error("creating bigquery client", "error", err)

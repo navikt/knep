@@ -14,7 +14,6 @@ import (
 var cfg = config.Config{}
 
 func init() {
-	flag.StringVar(&cfg.BindAddress, "bind-address", ":9443", "The bind address")
 	flag.StringVar(&cfg.StatsProjectID, "stats-bigquery-project", os.Getenv("BIGQUERY_PROJECT"), "The GCP project where allowlist statistics should be written")
 	flag.StringVar(&cfg.StatsDatasetID, "stats-bigquery-dataset", os.Getenv("BIGQUERY_DATASET"), "The BigQuery dataset where allowlist statistics should be written")
 	flag.StringVar(&cfg.StatsTableID, "stats-bigquery-table", os.Getenv("BIGQUERY_TABLE"), "The BigQuery dataset where allowlist statistics should be written")
@@ -34,7 +33,7 @@ func main() {
 	}
 
 	server := http.Server{
-		Addr:    cfg.BindAddress,
+		Addr:    ":9443",
 		Handler: api,
 	}
 
