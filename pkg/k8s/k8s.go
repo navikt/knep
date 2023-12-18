@@ -37,7 +37,7 @@ type K8SClient struct {
 	logger          *slog.Logger
 }
 
-func New(inCluster bool, bigqueryClient *bigquery.BigQuery, logger *slog.Logger) (*K8SClient, error) {
+func New(inCluster bool, onpremFirewallPath string, bigqueryClient *bigquery.BigQuery, logger *slog.Logger) (*K8SClient, error) {
 	client, err := createClientset(inCluster)
 	if err != nil {
 		return nil, err
@@ -48,7 +48,7 @@ func New(inCluster bool, bigqueryClient *bigquery.BigQuery, logger *slog.Logger)
 		return nil, err
 	}
 
-	oracleScanHosts, err := getOracleScanHosts()
+	oracleScanHosts, err := getOracleScanHosts(onpremFirewallPath)
 	if err != nil {
 		return nil, err
 	}
@@ -97,8 +97,8 @@ func createKubeConfig(inCluster bool) (*rest.Config, error) {
 	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(configLoadingRules, configOverrides).ClientConfig()
 }
 
-func getOracleScanHosts() (map[string]OracleHost, error) {
-	dataBytes, err := os.ReadFile("/var/run/onprem-firewall.yaml")
+func getOracleScanHosts(onpremFirewallPath string) (map[string]OracleHost, error) {
+	dataBytes, err := os.ReadFile(onpremFirewallPath)
 	if err != nil {
 		return nil, err
 	}

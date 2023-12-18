@@ -7,8 +7,8 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func New(ctx context.Context, incluster bool, stats StatsSink, logger *slog.Logger) (*chi.Mux, error) {
-	admissionHandler, err := NewAdmissionHandler(ctx, incluster, stats, logger)
+func New(ctx context.Context, incluster bool, onpremFirewallFilePath string, stats StatsSink, logger *slog.Logger) (*chi.Mux, error) {
+	admissionHandler, err := NewAdmissionHandler(ctx, incluster, onpremFirewallFilePath, stats, logger)
 	if err != nil {
 		return nil, err
 	}

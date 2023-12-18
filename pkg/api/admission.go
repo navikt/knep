@@ -27,14 +27,14 @@ type AdmissionHandler struct {
 	logger    *slog.Logger
 }
 
-func NewAdmissionHandler(ctx context.Context, inCluster bool, stats StatsSink, logger *slog.Logger) (*AdmissionHandler, error) {
+func NewAdmissionHandler(ctx context.Context, inCluster bool, onpremFirewallFilePath string, stats StatsSink, logger *slog.Logger) (*AdmissionHandler, error) {
 	bqClient, err := bigquery.New(ctx, stats.ProjectID, stats.DatasetID, stats.TableID)
 	if err != nil {
 		logger.Error("creating bigquery client", "error", err)
 		return nil, err
 	}
 
-	k8sClient, err := k8s.New(inCluster, bqClient, logger)
+	k8sClient, err := k8s.New(inCluster, onpremFirewallFilePath, bqClient, logger)
 	if err != nil {
 		logger.Error("creating k8s client", "error", err)
 		return nil, err
