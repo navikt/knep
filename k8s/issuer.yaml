@@ -1,7 +1,7 @@
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
-  name: knep-issuer
+  name: knep
   namespace: knada-system
   labels:
     app.kubernetes.io/name: knep

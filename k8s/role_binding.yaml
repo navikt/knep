@@ -1,11 +1,11 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: manager-rolebinding
+  name: knep
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: knep-role
+  name: knep
 subjects:
 - kind: ServiceAccount
   name: knep
