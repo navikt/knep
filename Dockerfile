@@ -3,10 +3,12 @@ WORKDIR /src
 COPY go.sum go.sum
 COPY go.mod go.mod
 RUN go mod download
-COPY . .
+
+COPY pkg pkg
+COPY main.go main.go
 RUN go build -o knep
 
-FROM alpine:3
+FROM gcr.io/distroless/static:nonroot
 WORKDIR /app
 COPY --from=builder /src/knep /app/knep
 CMD ["/app/knep"]

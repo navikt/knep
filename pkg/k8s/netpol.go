@@ -50,7 +50,7 @@ func (k *K8SClient) AlterNetpol(ctx context.Context, admissionRequest *v1beta1.A
 			return err
 		}
 	default:
-		k.logger.Info("unsupported request operation %v", admissionRequest.Operation)
+		k.logger.Info("unsupported request operation %v", "operation", admissionRequest.Operation)
 		return nil
 	}
 
