@@ -24,6 +24,12 @@ type AllowIPFQDN struct {
 	FQDN map[int32][]string
 }
 
+var fqdnNetpolResource = schema.GroupVersionResource{
+	Group:    "networking.gke.io",
+	Version:  "v1alpha3",
+	Resource: "fqdnnetworkpolicies",
+}
+
 const (
 	allowListAnnotationKey       = "allowlist"
 	jupyterPodLabelKey           = "component"
@@ -129,12 +135,6 @@ func (k *K8SClient) createOrReplaceFQDNNetworkPolicy(ctx context.Context, object
 	}
 
 	objectMeta.Name += "-fqdn"
-	fqdnNetpolResource := schema.GroupVersionResource{
-		Group:    "networking.gke.io",
-		Version:  "v1alpha3",
-		Resource: "fqdnnetworkpolicies",
-	}
-
 	fqdnNetworkPolicy, err := createFQDNNetworkPolicy(objectMeta, podSelector, portHostMap)
 	if err != nil {
 		return err
@@ -174,12 +174,6 @@ func (k *K8SClient) ensureNetpolCreated(ctx context.Context, fqdnNetpolResource 
 }
 
 func (k *K8SClient) deleteNetpol(ctx context.Context, pod corev1.Pod) error {
-	fqdnNetpolResource := schema.GroupVersionResource{
-		Group:    "networking.gke.io",
-		Version:  "v1alpha3",
-		Resource: "fqdnnetworkpolicies",
-	}
-
 	err := k.dynamicClient.Resource(fqdnNetpolResource).Namespace(pod.Namespace).Delete(ctx, pod.Name+"-fqdn", metav1.DeleteOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
 		return err
@@ -306,12 +300,6 @@ func createPodSelector(pod corev1.Pod) (metav1.LabelSelector, error) {
 }
 
 func (k *K8SClient) defaultFQDNNetworkPolicyExists(ctx context.Context, namespace string) error {
-	fqdnNetpolResource := schema.GroupVersionResource{
-		Group:    "networking.gke.io",
-		Version:  "v1alpha3",
-		Resource: "fqdnnetworkpolicies",
-	}
-
 	_, err := k.dynamicClient.Resource(fqdnNetpolResource).Namespace(namespace).Get(ctx, defaultFQDNNetworkPolicyName, metav1.GetOptions{})
 	if err != nil {
 		return err
