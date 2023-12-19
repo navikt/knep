@@ -174,7 +174,6 @@ func (k *K8SClient) ensureNetpolCreated(ctx context.Context, namespace, name str
 
 	for event := range watcher.ResultChan() {
 		switch event.Type {
-		default:
 		case watch.Added:
 			return nil
 		}
