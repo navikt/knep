@@ -150,16 +150,16 @@ func (k *K8SClient) createOrReplaceFQDNNetworkPolicy(ctx context.Context, object
 		return err
 	}
 
-	if err := k.ensureNetpolCreated(ctx, fqdnNetpolResource, objectMeta); err != nil {
+	if err := k.ensureNetpolCreated(ctx, fqdnNetworkPolicy.GetNamespace(), fqdnNetworkPolicy.GetName()); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (k *K8SClient) ensureNetpolCreated(ctx context.Context, fqdnNetpolResource schema.GroupVersionResource, objectMeta metav1.ObjectMeta) error {
+func (k *K8SClient) ensureNetpolCreated(ctx context.Context, namespace, name string) error {
 	for i := 0; i < netpolCreatedTimeoutSeconds; i++ {
-		_, err := k.client.NetworkingV1().NetworkPolicies(objectMeta.Namespace).Get(ctx, objectMeta.Name, metav1.GetOptions{})
+		_, err := k.client.NetworkingV1().NetworkPolicies(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
 			return nil
 		}
