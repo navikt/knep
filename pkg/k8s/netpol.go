@@ -37,14 +37,12 @@ func (k *K8SClient) AlterNetpol(ctx context.Context, admissionRequest *v1beta1.A
 	var pod corev1.Pod
 	switch admissionRequest.Operation {
 	case v1beta1.Create:
-		fmt.Printf("create request for pod %v in namespace %v", pod.Name, pod.Namespace)
 		alterNetpol = k.createNetpol
 		if err := json.Unmarshal(admissionRequest.Object.Raw, &pod); err != nil {
 			k.logger.Error("unmarshalling pod object", "error", err)
 			return err
 		}
 	case v1beta1.Delete:
-		fmt.Printf("delete request for pod %v in namespace %v", pod.Name, pod.Namespace)
 		alterNetpol = k.deleteNetpol
 		if err := json.Unmarshal(admissionRequest.OldObject.Raw, &pod); err != nil {
 			k.logger.Error("unmarshalling pod object", "error", err)
@@ -71,6 +69,8 @@ func (k *K8SClient) AlterNetpol(ctx context.Context, admissionRequest *v1beta1.A
 }
 
 func (k *K8SClient) createNetpol(ctx context.Context, pod corev1.Pod) error {
+	start := time.Now()
+	fmt.Printf("create netpol for pod %v namespace %v, starttime: %v\n", pod.Name, pod.Namespace, start)
 	allowList := pod.Annotations[allowListAnnotationKey]
 	trimmedList := strings.ReplaceAll(allowList, " ", "")
 	hosts := strings.Split(trimmedList, ",")
@@ -103,6 +103,8 @@ func (k *K8SClient) createNetpol(ctx context.Context, pod corev1.Pod) error {
 	// if err := k.bigqueryClient.PersistAllowlistStats(ctx, hostMap, pod); err != nil {
 	// 	k.logger.Error("persisting allowlist stats", "error", err)
 	// }
+
+	fmt.Printf("done creating netpol for pod %v namespace %v, took: %v\n", pod.Name, pod.Namespace, time.Since(start))
 
 	return nil
 }
