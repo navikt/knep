@@ -60,12 +60,7 @@ func (a *AdmissionHandler) Validate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := a.k8sClient.AlterNetpol(r.Context(), review.Request); err == nil {
-		review.Response = &v1beta1.AdmissionResponse{
-			Allowed: true,
-			UID:     review.Request.UID,
-		}
-	} else {
+	if err := a.k8sClient.AlterNetpol(r.Context(), review.Request); err != nil {
 		a.logger.Error("altering netpol", "error", err)
 		review.Response = &v1beta1.AdmissionResponse{
 			Allowed: false,
@@ -74,6 +69,11 @@ func (a *AdmissionHandler) Validate(w http.ResponseWriter, r *http.Request) {
 				Status:  "Failure",
 				Message: err.Error(),
 			},
+		}
+	} else {
+		review.Response = &v1beta1.AdmissionResponse{
+			Allowed: true,
+			UID:     review.Request.UID,
 		}
 	}
 

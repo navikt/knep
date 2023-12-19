@@ -156,11 +156,7 @@ func (k *K8SClient) createOrReplaceFQDNNetworkPolicy(ctx context.Context, object
 	fmt.Println("fqdn netpol namespace", fqdnNetworkPolicy.GetNamespace())
 	fmt.Println("fqdn netpol name", fqdnNetworkPolicy.GetName())
 
-	if err := k.ensureNetpolCreated(ctx, fqdnNetworkPolicy.GetNamespace(), fqdnNetworkPolicy.GetName()); err != nil {
-		return err
-	}
-
-	return nil
+	return nil // k.ensureNetpolCreated(ctx, fqdnNetworkPolicy.GetNamespace(), fqdnNetworkPolicy.GetName())
 }
 
 func (k *K8SClient) ensureNetpolCreated(ctx context.Context, namespace, name string) error {
