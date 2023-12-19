@@ -85,6 +85,9 @@ func (k *K8SClient) createNetpol(ctx context.Context, pod corev1.Pod) error {
 	objectMeta := metav1.ObjectMeta{
 		Name:      pod.Name,
 		Namespace: pod.Namespace,
+		Labels: map[string]string{
+			"app.kubernetes.io/managed-by": "knep",
+		},
 	}
 
 	if err := k.createOrUpdateNetworkPolicy(ctx, objectMeta, podSelector, hostMap.IP); err != nil {
@@ -242,6 +245,7 @@ func createFQDNNetworkPolicy(objectMeta metav1.ObjectMeta, podSelector metav1.La
 		"metadata": map[string]any{
 			"name":      objectMeta.Name + "-fqdn",
 			"namespace": objectMeta.Namespace,
+			"labels":    objectMeta.Labels,
 		},
 		"spec": map[string]any{
 			"podSelector": map[string]any{
