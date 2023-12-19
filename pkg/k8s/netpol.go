@@ -147,9 +147,7 @@ func (k *K8SClient) createOrReplaceFQDNNetworkPolicy(ctx context.Context, object
 
 	_, err = k.dynamicClient.Resource(fqdnNetpolResource).Namespace(objectMeta.Namespace).Get(ctx, fqdnNetworkPolicy.GetName(), metav1.GetOptions{})
 	if err == nil {
-		if err := k.dynamicClient.Resource(fqdnNetpolResource).Namespace(objectMeta.Namespace).Delete(ctx, fqdnNetworkPolicy.GetName(), metav1.DeleteOptions{}); err != nil {
-			return err
-		}
+		return nil
 	} else if err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
@@ -171,10 +169,11 @@ func (k *K8SClient) ensureNetpolCreated(ctx context.Context, namespace, name str
 	if err != nil {
 		return err
 	}
+	defer watcher.Stop()
 
 	for event := range watcher.ResultChan() {
 		switch event.Type {
-		case watch.Added:
+		case watch.Added, watch.Modified:
 			return nil
 		}
 	}
