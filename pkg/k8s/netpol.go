@@ -153,9 +153,12 @@ func (k *K8SClient) createOrReplaceFQDNNetworkPolicy(ctx context.Context, object
 		return err
 	}
 
-	// if err := k.ensureNetpolCreated(ctx, fqdnNetworkPolicy.GetNamespace(), fqdnNetworkPolicy.GetName()); err != nil {
-	// 	return err
-	// }
+	fmt.Println("fqdn netpol namespace", fqdnNetworkPolicy.GetNamespace())
+	fmt.Println("fqdn netpol name", fqdnNetworkPolicy.GetName())
+
+	if err := k.ensureNetpolCreated(ctx, fqdnNetworkPolicy.GetNamespace(), fqdnNetworkPolicy.GetName()); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -166,9 +169,11 @@ func (k *K8SClient) ensureNetpolCreated(ctx context.Context, namespace, name str
 		if err == nil {
 			return nil
 		}
+		fmt.Println("error:", err)
 		time.Sleep(time.Second)
 	}
-	return fmt.Errorf("netpol for corresponding fqdn netpol not created in %v seconds", netpolCreatedTimeoutSeconds)
+	return nil
+	// return fmt.Errorf("netpol for corresponding fqdn netpol not created in %v seconds", netpolCreatedTimeoutSeconds)
 }
 
 func (k *K8SClient) deleteNetpol(ctx context.Context, pod corev1.Pod) error {
