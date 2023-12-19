@@ -11,7 +11,6 @@ import (
 )
 
 type Config struct {
-	BindAddress            string
 	CertPath               string
 	InCluster              bool
 	OnpremFirewallFilePath string
