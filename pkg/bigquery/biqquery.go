@@ -79,12 +79,11 @@ func (bq *BigQuery) PersistAllowlistStats(ctx context.Context, allowStruct any, 
 		return err
 	}
 
-	service, team := getServiceTypeAndTeamFromPodSpec(pod)
 	tableEntry := allowListTableEntry{
 		PodName:   pod.Name,
-		Team:      team,
+		Team:      pod.Spec.ServiceAccountName,
 		Namespace: pod.Namespace,
-		Service:   service,
+		Service:   getServiceTypeFromPodSpec(pod),
 		Allowlist: bigquery.NullJSON{JSONVal: string(allowBytes), Valid: string(allowBytes) != ""},
 		Created:   bigquery.NullTimestamp{Timestamp: pod.CreationTimestamp.Time, Valid: true},
 	}
@@ -93,14 +92,14 @@ func (bq *BigQuery) PersistAllowlistStats(ctx context.Context, allowStruct any, 
 	return inserter.Put(ctx, tableEntry)
 }
 
-func getServiceTypeAndTeamFromPodSpec(pod corev1.Pod) (string, string) {
+func getServiceTypeFromPodSpec(pod corev1.Pod) string {
 	if serviceType, ok := pod.Labels["app"]; ok && serviceType == "jupyterhub" {
-		team := ""
-		if teamName, ok := pod.Labels["team"]; ok {
-			team = teamName
-		}
-		return serviceType, team
+		return serviceType
 	}
 
-	return "airflow", pod.Spec.ServiceAccountName
+	if _, ok := pod.Labels["dag_id"]; ok {
+		return "airflow"
+	}
+
+	return ""
 }

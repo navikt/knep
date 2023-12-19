@@ -29,7 +29,7 @@ const (
 	jupyterhubLabelValue         = "singleuser-server"
 	airflowPodLabelKey           = "dag_id"
 	defaultFQDNNetworkPolicyName = "default-allow-fqdn"
-	netpolCreatedTimeoutSeconds  = 10
+	netpolCreatedTimeoutSeconds  = 20
 )
 
 func (k *K8SClient) AlterNetpol(ctx context.Context, admissionRequest *v1beta1.AdmissionRequest) error {
@@ -158,7 +158,7 @@ func (k *K8SClient) createOrReplaceFQDNNetworkPolicy(ctx context.Context, object
 	fmt.Println("fqdn netpol namespace", fqdnNetworkPolicy.GetNamespace())
 	fmt.Println("fqdn netpol name", fqdnNetworkPolicy.GetName())
 
-	return nil // k.ensureNetpolCreated(ctx, fqdnNetworkPolicy.GetNamespace(), fqdnNetworkPolicy.GetName())
+	return k.ensureNetpolCreated(ctx, fqdnNetworkPolicy.GetNamespace(), fqdnNetworkPolicy.GetName())
 }
 
 func (k *K8SClient) ensureNetpolCreated(ctx context.Context, namespace, name string) error {
@@ -170,8 +170,9 @@ func (k *K8SClient) ensureNetpolCreated(ctx context.Context, namespace, name str
 		fmt.Println("error:", err)
 		time.Sleep(time.Second)
 	}
+
+	k.logger.Info("netpol for corresponding fqdn netpol not created", "namespace", namespace, "fqdn", name)
 	return nil
-	// return fmt.Errorf("netpol for corresponding fqdn netpol not created in %v seconds", netpolCreatedTimeoutSeconds)
 }
 
 func (k *K8SClient) deleteNetpol(ctx context.Context, pod corev1.Pod) error {
