@@ -100,9 +100,9 @@ func (k *K8SClient) createNetpol(ctx context.Context, pod corev1.Pod) error {
 		return err
 	}
 
-	if err := k.bigqueryClient.PersistAllowlistStats(ctx, hostMap, pod); err != nil {
-		k.logger.Error("persisting allowlist stats", "error", err)
-	}
+	// if err := k.bigqueryClient.PersistAllowlistStats(ctx, hostMap, pod); err != nil {
+	// 	k.logger.Error("persisting allowlist stats", "error", err)
+	// }
 
 	return nil
 }
