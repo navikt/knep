@@ -2,11 +2,10 @@ package api
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 
-	"github.com/gin-gonic/gin"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/navikt/knep/pkg/hostmap"
 )
 
@@ -28,8 +27,6 @@ func New(ctx context.Context, incluster bool, onpremFirewallFilePath string, sta
 }
 
 func setupRoutes(router *chi.Mux, admissionHandler *AdmissionHandler) {
-	router.Use(func(ctx *gin.Context) {
-		admissionHandler.logger.Info(fmt.Sprintf("%v %v %v", ctx.Request.URL.Path, ctx.Request.Method, ctx.Writer.Status()))
-	})
+	router.Use(middleware.Logger)
 	router.Post("/admission", admissionHandler.Validate)
 }
