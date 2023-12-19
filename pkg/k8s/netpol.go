@@ -98,7 +98,7 @@ func (k *K8SClient) createNetpol(ctx context.Context, pod corev1.Pod) error {
 		return err
 	}
 
-	if err := k.createOrReplaceFQDNNetworkPolicy(ctx, objectMeta, podSelector, hostMap.FQDN); err != nil {
+	if err := k.createOrUpdateFQDNNetworkPolicy(ctx, objectMeta, podSelector, hostMap.FQDN); err != nil {
 		return err
 	}
 
@@ -135,7 +135,7 @@ func (k *K8SClient) createOrUpdateNetworkPolicy(ctx context.Context, objectMeta 
 	return nil
 }
 
-func (k *K8SClient) createOrReplaceFQDNNetworkPolicy(ctx context.Context, objectMeta metav1.ObjectMeta, podSelector metav1.LabelSelector, portHostMap map[int32][]string) error {
+func (k *K8SClient) createOrUpdateFQDNNetworkPolicy(ctx context.Context, objectMeta metav1.ObjectMeta, podSelector metav1.LabelSelector, portHostMap map[int32][]string) error {
 	if len(portHostMap) == 0 {
 		return nil
 	}
@@ -145,9 +145,13 @@ func (k *K8SClient) createOrReplaceFQDNNetworkPolicy(ctx context.Context, object
 		return err
 	}
 
-	_, err = k.dynamicClient.Resource(fqdnNetpolResource).Namespace(objectMeta.Namespace).Get(ctx, fqdnNetworkPolicy.GetName(), metav1.GetOptions{})
+	existing, err := k.dynamicClient.Resource(fqdnNetpolResource).Namespace(objectMeta.Namespace).Get(ctx, fqdnNetworkPolicy.GetName(), metav1.GetOptions{})
 	if err == nil {
-		return nil
+		existing.Object["spec"] = fqdnNetworkPolicy.Object["spec"]
+		_, err := k.dynamicClient.Resource(fqdnNetpolResource).Namespace(objectMeta.Namespace).Update(ctx, existing, metav1.UpdateOptions{})
+		if err != nil {
+			return err
+		}
 	} else if err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
@@ -161,7 +165,7 @@ func (k *K8SClient) createOrReplaceFQDNNetworkPolicy(ctx context.Context, object
 }
 
 func (k *K8SClient) ensureNetpolCreated(ctx context.Context, namespace, name string) error {
-	timeout := int64(20)
+	timeout := int64(netpolCreatedTimeoutSeconds)
 	watcher, err := k.client.NetworkingV1().NetworkPolicies(namespace).Watch(ctx, metav1.ListOptions{
 		FieldSelector:  fields.OneTermEqualSelector("metadata.name", name).String(),
 		TimeoutSeconds: &timeout,
