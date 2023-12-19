@@ -13,6 +13,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -164,13 +165,22 @@ func (k *K8SClient) createOrReplaceFQDNNetworkPolicy(ctx context.Context, object
 }
 
 func (k *K8SClient) ensureNetpolCreated(ctx context.Context, namespace, name string) error {
-	for i := 0; i < netpolCreatedTimeoutSeconds; i++ {
-		_, err := k.client.NetworkingV1().NetworkPolicies(namespace).Get(ctx, name, metav1.GetOptions{})
-		if err == nil {
+	timeout := int64(20)
+	watch, err := k.client.NetworkingV1().NetworkPolicies(namespace).Watch(ctx, metav1.ListOptions{
+		FieldSelector:  fields.OneTermEqualSelector("metadata.name", name).String(),
+		TimeoutSeconds: &timeout,
+	})
+	if err != nil {
+		return err
+	}
+
+	for event := range watch.ResultChan() {
+		item := event.Object.(*networkingv1.NetworkPolicy)
+		fmt.Println("netpol created", item.Name)
+		switch event.Type {
+		default:
 			return nil
 		}
-		fmt.Println("error:", err)
-		time.Sleep(time.Second)
 	}
 
 	k.logger.Info("netpol for corresponding fqdn netpol not created", "namespace", namespace, "fqdn", name)
