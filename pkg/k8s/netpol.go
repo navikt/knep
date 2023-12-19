@@ -12,6 +12,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -172,8 +173,9 @@ func (k *K8SClient) ensureNetpolCreated(ctx context.Context, namespace, name str
 	}
 
 	for event := range watch.ResultChan() {
-		item := event.Object.(*networkingv1.NetworkPolicy)
-		fmt.Println("netpol created", item.Name)
+		item := event.Object.(*v1.Status)
+		fmt.Println("netpol created", item)
+		fmt.Println("event type", event.Type)
 		switch event.Type {
 		default:
 			return nil
