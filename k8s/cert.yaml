@@ -10,5 +10,5 @@ spec:
   - 'knep.knada-system.svc'
   issuerRef:
     kind: Issuer
-    name: knep-issuer
+    name: knep
   secretName: knep-webhook-server-cert

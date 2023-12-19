@@ -3,7 +3,7 @@ kind: ValidatingWebhookConfiguration
 metadata:
   name: knep
   annotations:
-    cert-manager.io/inject-ca-from: knada-system/knep-cert
+    cert-manager.io/inject-ca-from: knada-system/knep
 webhooks:
   - name: knep.knada-system.svc
     namespaceSelector:
