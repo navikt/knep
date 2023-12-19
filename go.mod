@@ -5,6 +5,7 @@ go 1.21.3
 require (
 	cloud.google.com/go/bigquery v1.57.1
 	github.com/go-chi/chi/v5 v5.0.10
+	github.com/go-chi/httplog/v2 v2.0.8
 	google.golang.org/api v0.154.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.28.4

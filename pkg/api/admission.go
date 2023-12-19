@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -60,6 +61,7 @@ func (a *AdmissionHandler) Validate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	a.logger.Info(fmt.Sprintf("admission request for %s/%s", review.Request.Namespace, review.Request.Name))
 	if err := a.k8sClient.AlterNetpol(r.Context(), review.Request); err != nil {
 		a.logger.Error("altering netpol", "error", err)
 		review.Response = &v1beta1.AdmissionResponse{
