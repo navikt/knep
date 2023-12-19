@@ -150,9 +150,9 @@ func (k *K8SClient) createOrReplaceFQDNNetworkPolicy(ctx context.Context, object
 		return err
 	}
 
-	if err := k.ensureNetpolCreated(ctx, fqdnNetworkPolicy.GetNamespace(), fqdnNetworkPolicy.GetName()); err != nil {
-		return err
-	}
+	// if err := k.ensureNetpolCreated(ctx, fqdnNetworkPolicy.GetNamespace(), fqdnNetworkPolicy.GetName()); err != nil {
+	// 	return err
+	// }
 
 	return nil
 }
