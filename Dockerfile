@@ -6,6 +6,7 @@ RUN go mod download
 
 COPY pkg pkg
 COPY main.go main.go
+RUN go test ./... -count=1
 RUN go build -o knep
 
 FROM gcr.io/distroless/static:nonroot
