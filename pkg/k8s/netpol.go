@@ -152,12 +152,12 @@ func (k *K8SClient) createOrUpdateFQDNNetworkPolicy(ctx context.Context, objectM
 		if err != nil {
 			return err
 		}
-	} else if err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-
-	_, err = k.dynamicClient.Resource(fqdnNetpolResource).Namespace(objectMeta.Namespace).Create(ctx, fqdnNetworkPolicy, metav1.CreateOptions{})
-	if err != nil {
+	} else if !apierrors.IsNotFound(err) {
+		_, err = k.dynamicClient.Resource(fqdnNetpolResource).Namespace(objectMeta.Namespace).Create(ctx, fqdnNetworkPolicy, metav1.CreateOptions{})
+		if err != nil {
+			return err
+		}
+	} else {
 		return err
 	}
 
