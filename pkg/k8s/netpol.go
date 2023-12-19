@@ -12,11 +12,11 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/watch"
 )
 
 var fqdnNetpolResource = schema.GroupVersionResource{
@@ -164,7 +164,7 @@ func (k *K8SClient) createOrReplaceFQDNNetworkPolicy(ctx context.Context, object
 
 func (k *K8SClient) ensureNetpolCreated(ctx context.Context, namespace, name string) error {
 	timeout := int64(20)
-	watch, err := k.client.NetworkingV1().NetworkPolicies(namespace).Watch(ctx, metav1.ListOptions{
+	watcher, err := k.client.NetworkingV1().NetworkPolicies(namespace).Watch(ctx, metav1.ListOptions{
 		FieldSelector:  fields.OneTermEqualSelector("metadata.name", name).String(),
 		TimeoutSeconds: &timeout,
 	})
@@ -172,12 +172,10 @@ func (k *K8SClient) ensureNetpolCreated(ctx context.Context, namespace, name str
 		return err
 	}
 
-	for event := range watch.ResultChan() {
-		item := event.Object.(*v1.Status)
-		fmt.Println("netpol created", item)
-		fmt.Println("event type", event.Type)
+	for event := range watcher.ResultChan() {
 		switch event.Type {
 		default:
+		case watch.Added:
 			return nil
 		}
 	}
