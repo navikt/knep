@@ -57,6 +57,10 @@ func (k *K8SClient) AlterNetpol(ctx context.Context, admissionRequest *v1beta1.A
 		return nil
 	}
 
+	if err := k.defaultFQDNNetworkPolicyExists(ctx, pod.Namespace); err != nil {
+		return nil
+	}
+
 	if _, ok := pod.Annotations[allowListAnnotationKey]; !ok {
 		return nil
 	}
