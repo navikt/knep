@@ -1,6 +1,7 @@
 package hostmap
 
 import (
+	"fmt"
 	"os"
 	"regexp"
 	"strconv"
@@ -47,7 +48,7 @@ func New(onpremFirewallPath string) (*HostMap, error) {
 func getOracleScanHosts(onpremFirewallPath string) (map[string]OracleHost, error) {
 	dataBytes, err := os.ReadFile(onpremFirewallPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read file %s: %w", onpremFirewallPath, err)
 	}
 
 	var hostMap Hosts
