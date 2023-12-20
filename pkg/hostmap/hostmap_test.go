@@ -9,30 +9,45 @@ import (
 )
 
 const (
-	onpremFirewallYaml = `
-oracle:
-- host: db-scan.nav.no
+	onpremHostYaml = `
+db.nav.no:
   port: 1521
   ips:
-  - "2.3.4.5"
-  - "6.7.8.9"
-  - "10.11.12.13"
+    - "1.2.3.4"
+db2.nav.no:
+  port: 1521
+  ips:
+    - "11.22.33.44"
+db-scan.nav.no:
+  port: 1521
+  ips:
+    - "2.3.4.5"
+    - "6.7.8.9"
+    - "10.11.12.13"
   scan:
-  - host: db1-vip.adeo.no
-    ip: "14.15.16.17"
-    port: 1521
-  - host: db2-vip.adeo.no 
-    ip: "18.19.20.21"
-    port: 1521
-  - host: db3-vip.adeo.no 
-    ip: "22.23.24.25"
-    port: 1521
-  - host: db4-vip.adeo.no
-    ip: "26.27.28.29"
-    port: 1521
-- host: db5.adeo.no
+    - db1-vip.adeo.no
+    - db2-vip.adeo.no
+    - db3-vip.adeo.no
+    - db4-vip.adeo.no
+db1-vip.adeo.no:
   ips: 
-  - "44.55.66.77"
+    - "14.15.16.17"
+  port: 1521
+db2-vip.adeo.no:
+  ips: 
+    - "18.19.20.21"
+  port: 1521
+db3-vip.adeo.no:
+  ips: 
+    - "22.23.24.25"
+  port: 1521
+db4-vip.adeo.no:
+  ips: 
+    - "26.27.28.29"
+  port: 1521
+db5.adeo.no:
+  ips: 
+    - "44.55.66.77"
   port: 1521
 `
 )
@@ -43,7 +58,7 @@ func Test_CreatePortHostMap(t *testing.T) {
 		log.Fatal(err)
 	}
 	defer os.Remove(firewallMapfile.Name())
-	_, err = firewallMapfile.Write([]byte(onpremFirewallYaml))
+	_, err = firewallMapfile.Write([]byte(onpremHostYaml))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,12 +89,12 @@ func Test_CreatePortHostMap(t *testing.T) {
 			},
 			want: AllowIPFQDN{
 				FQDN: map[int32][]string{
-					443:  {"google.com"},
-					5432: {"db.nav.no", "db2.nav.no"},
+					443: {"google.com"},
 				},
 				IP: map[int32][]string{
 					22:   {"123.123.123.123"},
 					8080: {"1.1.1.1"},
+					5432: {"1.2.3.4", "11.22.33.44"},
 				},
 			},
 		},
@@ -94,11 +109,11 @@ func Test_CreatePortHostMap(t *testing.T) {
 			},
 			want: AllowIPFQDN{
 				FQDN: map[int32][]string{
-					443:  {"google.com"},
-					1521: {"db-scan.nav.no", "db1-vip.adeo.no", "db2-vip.adeo.no", "db3-vip.adeo.no", "db4-vip.adeo.no"},
+					443: {"google.com"},
 				},
 				IP: map[int32][]string{
 					8080: {"1.1.1.1"},
+					1521: {"2.3.4.5", "6.7.8.9", "10.11.12.13", "14.15.16.17", "18.19.20.21", "22.23.24.25", "26.27.28.29"},
 				},
 			},
 		},

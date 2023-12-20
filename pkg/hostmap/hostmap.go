@@ -10,19 +10,10 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type Host struct {
-	Host string `json:"host"`
-	Port int    `json:"port"`
-}
-
-type OracleHost struct {
-	Host string `json:"host"`
-	Port int    `json:"port"`
-	Scan []Host `json:"scan"`
-}
-
-type Hosts struct {
-	Oracle []OracleHost `json:"oracle"`
+type OnpremHost struct {
+	IPs  []string `json:"ips"`
+	Port int      `json:"port"`
+	Scan []string `json:"scan"`
 }
 
 type AllowIPFQDN struct {
@@ -31,39 +22,32 @@ type AllowIPFQDN struct {
 }
 
 type HostMap struct {
-	oracleScanHosts map[string]OracleHost
+	onpremHosts map[string]OnpremHost
 }
 
 func New(onpremFirewallPath string) (*HostMap, error) {
-	oracleScanHosts, err := getOracleScanHosts(onpremFirewallPath)
+	onpremHosts, err := getOnpremHostMap(onpremFirewallPath)
 	if err != nil {
 		return nil, err
 	}
 
 	return &HostMap{
-		oracleScanHosts: oracleScanHosts,
+		onpremHosts: onpremHosts,
 	}, nil
 }
 
-func getOracleScanHosts(onpremFirewallPath string) (map[string]OracleHost, error) {
+func getOnpremHostMap(onpremFirewallPath string) (map[string]OnpremHost, error) {
 	dataBytes, err := os.ReadFile(onpremFirewallPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file %s: %w", onpremFirewallPath, err)
 	}
 
-	var hostMap Hosts
-	if err := yaml.Unmarshal(dataBytes, &hostMap); err != nil {
+	var onpremHostMap map[string]OnpremHost
+	if err := yaml.Unmarshal(dataBytes, &onpremHostMap); err != nil {
 		return nil, err
 	}
 
-	oracleScanHosts := map[string]OracleHost{}
-	for _, oracleHost := range hostMap.Oracle {
-		if len(oracleHost.Scan) > 0 {
-			oracleScanHosts[oracleHost.Host] = oracleHost
-		}
-	}
-
-	return oracleScanHosts, nil
+	return onpremHostMap, nil
 }
 
 func (h *HostMap) CreatePortHostMap(hosts []string) (AllowIPFQDN, error) {
@@ -89,12 +73,15 @@ func (h *HostMap) CreatePortHostMap(hosts []string) (AllowIPFQDN, error) {
 		if ipRegex.MatchString(host) {
 			allow.IP[portInt] = append(allow.IP[portInt], host)
 		} else {
-			allow.FQDN[portInt] = append(allow.FQDN[portInt], host)
-
-			if scanHosts, ok := h.oracleScanHosts[host]; ok {
-				for _, scanHost := range scanHosts.Scan {
-					allow.FQDN[portInt] = append(allow.FQDN[portInt], scanHost.Host)
+			if hostConfig, ok := h.onpremHosts[host]; ok {
+				allow.IP[portInt] = append(allow.IP[portInt], hostConfig.IPs...)
+				for _, scanHost := range hostConfig.Scan {
+					if scanHostConfig, ok := h.onpremHosts[scanHost]; ok {
+						allow.IP[portInt] = append(allow.IP[portInt], scanHostConfig.IPs...)
+					}
 				}
+			} else {
+				allow.FQDN[portInt] = append(allow.FQDN[portInt], host)
 			}
 		}
 	}
