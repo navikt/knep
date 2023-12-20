@@ -30,13 +30,13 @@ type AdmissionHandler struct {
 }
 
 func NewAdmissionHandler(ctx context.Context, inCluster bool, hostMap *hostmap.HostMap, stats StatsSink, logger *slog.Logger) (*AdmissionHandler, error) {
-	// bqClient, err := bigquery.New(ctx, stats.ProjectID, stats.DatasetID, stats.TableID)
-	// if err != nil {
-	// 	logger.Error("creating bigquery client", "error", err)
-	// 	return nil, err
-	// }
+	bqClient, err := bigquery.New(ctx, stats.ProjectID, stats.DatasetID, stats.TableID)
+	if err != nil {
+		logger.Error("creating bigquery client", "error", err)
+		return nil, err
+	}
 
-	k8sClient, err := k8s.New(inCluster, hostMap, nil, logger)
+	k8sClient, err := k8s.New(inCluster, hostMap, bqClient, logger)
 	if err != nil {
 		logger.Error("creating k8s client", "error", err)
 		return nil, err
