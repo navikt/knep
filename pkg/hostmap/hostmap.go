@@ -78,6 +78,8 @@ func (h *HostMap) CreatePortHostMap(hosts []string) (AllowIPFQDN, error) {
 				for _, scanHost := range hostConfig.Scan {
 					if scanHostConfig, ok := h.onpremHosts[scanHost]; ok {
 						allow.IP[portInt] = append(allow.IP[portInt], scanHostConfig.IPs...)
+					} else {
+						allow.FQDN[portInt] = append(allow.FQDN[portInt], scanHost)
 					}
 				}
 			} else {
