@@ -25,12 +25,11 @@ var fqdnNetpolResource = schema.GroupVersionResource{
 }
 
 const (
-	allowListAnnotationKey       = "allowlist"
-	jupyterPodLabelKey           = "component"
-	jupyterhubLabelValue         = "singleuser-server"
-	airflowPodLabelKey           = "dag_id"
-	defaultFQDNNetworkPolicyName = "default-allow-fqdn"
-	netpolCreatedTimeoutSeconds  = 20
+	allowListAnnotationKey      = "allowlist"
+	jupyterPodLabelKey          = "component"
+	jupyterhubLabelValue        = "singleuser-server"
+	airflowPodLabelKey          = "dag_id"
+	netpolCreatedTimeoutSeconds = 20
 )
 
 func (k *K8SClient) AlterNetpol(ctx context.Context, admissionRequest *v1beta1.AdmissionRequest) error {
@@ -55,10 +54,6 @@ func (k *K8SClient) AlterNetpol(ctx context.Context, admissionRequest *v1beta1.A
 	}
 
 	if !isRelevantPod(pod.Labels) {
-		return nil
-	}
-
-	if err := k.defaultFQDNNetworkPolicyExists(ctx, pod.Namespace); err != nil {
 		return nil
 	}
 
@@ -306,13 +301,4 @@ func createPodSelector(pod corev1.Pod) (metav1.LabelSelector, error) {
 	}
 
 	return metav1.LabelSelector{}, fmt.Errorf("invalid pod labels when creating network policy for pod %v", pod.Name)
-}
-
-func (k *K8SClient) defaultFQDNNetworkPolicyExists(ctx context.Context, namespace string) error {
-	_, err := k.dynamicClient.Resource(fqdnNetpolResource).Namespace(namespace).Get(ctx, defaultFQDNNetworkPolicyName, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
