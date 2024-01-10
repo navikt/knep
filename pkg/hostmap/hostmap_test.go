@@ -126,7 +126,7 @@ func Test_CreatePortHostMap(t *testing.T) {
 			args: args{
 				hosts: []string{
 					"google.com",
-					"informatica.nav.no",
+					"informatica.nav.no:6005-6010",
 				},
 			},
 			want: AllowIPFQDN{
