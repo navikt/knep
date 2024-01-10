@@ -12,7 +12,7 @@ import (
 
 type OnpremHost struct {
 	IPs  []string `json:"ips"`
-	Port int      `json:"port"`
+	Port string   `json:"port"`
 	Scan []string `json:"scan"`
 }
 
@@ -74,7 +74,22 @@ func (h *HostMap) CreatePortHostMap(hosts []string) (AllowIPFQDN, error) {
 			allow.IP[portInt] = append(allow.IP[portInt], host)
 		} else {
 			if hostConfig, ok := h.onpremHosts[host]; ok {
-				allow.IP[portInt] = append(allow.IP[portInt], hostConfig.IPs...)
+				if portParts := strings.Split(hostConfig.Port, "-"); len(portParts) == 2 {
+					startPort, err := strconv.Atoi(portParts[0])
+					if err != nil {
+						return AllowIPFQDN{}, err
+					}
+					endPort, err := strconv.Atoi(portParts[1])
+					if err != nil {
+						return AllowIPFQDN{}, err
+					}
+
+					for port := startPort; port <= endPort; port++ {
+						allow.IP[int32(port)] = append(allow.IP[int32(port)], hostConfig.IPs...)
+					}
+				} else {
+					allow.IP[portInt] = append(allow.IP[portInt], hostConfig.IPs...)
+				}
 				for _, scanHost := range hostConfig.Scan {
 					if scanHostConfig, ok := h.onpremHosts[scanHost]; ok {
 						allow.IP[portInt] = append(allow.IP[portInt], scanHostConfig.IPs...)

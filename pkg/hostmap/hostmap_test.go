@@ -49,6 +49,10 @@ db5.adeo.no:
   ips: 
     - "44.55.66.77"
   port: 1521
+informatica.nav.no:
+  ips: 
+    - "123.123.123.123"
+  port: 6005-6010
 `
 )
 
@@ -114,6 +118,28 @@ func Test_CreatePortHostMap(t *testing.T) {
 				IP: map[int32][]string{
 					8080: {"1.1.1.1"},
 					1521: {"2.3.4.5", "6.7.8.9", "10.11.12.13", "14.15.16.17", "18.19.20.21", "22.23.24.25", "26.27.28.29"},
+				},
+			},
+		},
+		{
+			name: "Test create hostmap port range",
+			args: args{
+				hosts: []string{
+					"google.com",
+					"informatica.nav.no",
+				},
+			},
+			want: AllowIPFQDN{
+				FQDN: map[int32][]string{
+					443: {"google.com"},
+				},
+				IP: map[int32][]string{
+					6005: {"123.123.123.123"},
+					6006: {"123.123.123.123"},
+					6007: {"123.123.123.123"},
+					6008: {"123.123.123.123"},
+					6009: {"123.123.123.123"},
+					6010: {"123.123.123.123"},
 				},
 			},
 		},
