@@ -13,7 +13,6 @@ import (
 	"github.com/navikt/knep/pkg/k8s"
 	"k8s.io/api/admission/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 type StatsSink struct {
@@ -23,8 +22,6 @@ type StatsSink struct {
 }
 
 type AdmissionHandler struct {
-	decoder   runtime.Decoder
-	bqClient  *bigquery.BigQuery
 	k8sClient *k8s.K8SClient
 	logger    *slog.Logger
 }
