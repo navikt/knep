@@ -1,11 +1,10 @@
 package hostmap
 
 import (
-	"io/ioutil"
-	"log"
 	"os"
-	"reflect"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 const (
@@ -57,11 +56,12 @@ informatica.nav.no:
 )
 
 func Test_CreatePortHostMap(t *testing.T) {
-	firewallMapfile, err := ioutil.TempFile("/tmp", "onprem-firewall.yaml")
+	firewallMapfile, err := os.CreateTemp("/tmp", "onprem-firewall.yaml")
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	defer os.Remove(firewallMapfile.Name())
+
 	_, err = firewallMapfile.Write([]byte(onpremHostYaml))
 	if err != nil {
 		t.Fatal(err)
@@ -147,13 +147,13 @@ func Test_CreatePortHostMap(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			hostmap, err := hostMap.CreatePortHostMap(tt.args.hosts)
+			got, err := hostMap.CreatePortHostMap(tt.args.hosts)
 			if err != nil {
 				t.Error(err)
 			}
 
-			if !reflect.DeepEqual(hostmap, tt.want) {
-				t.Errorf("parse() = %v, want %v", hostmap, tt.want)
+			if diff := cmp.Diff(got, tt.want); diff != "" {
+				t.Errorf("CreatePortHostMap() mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}
