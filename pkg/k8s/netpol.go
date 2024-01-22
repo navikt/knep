@@ -86,16 +86,16 @@ func (k *K8SClient) createNetpol(ctx context.Context, pod corev1.Pod) error {
 		},
 	}
 
+	if err := k.bigqueryClient.PersistAllowlistStats(ctx, hostMap, pod); err != nil {
+		k.logger.Error("persisting allowlist stats", "error", err)
+	}
+
 	if err := k.createOrUpdateNetworkPolicy(ctx, objectMeta, podSelector, hostMap.IP); err != nil {
 		return err
 	}
 
 	if err := k.createOrUpdateFQDNNetworkPolicy(ctx, objectMeta, podSelector, hostMap.FQDN); err != nil {
 		return err
-	}
-
-	if err := k.bigqueryClient.PersistAllowlistStats(ctx, hostMap, pod); err != nil {
-		k.logger.Error("persisting allowlist stats", "error", err)
 	}
 
 	return nil
