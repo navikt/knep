@@ -32,6 +32,12 @@ spec:
           - name: ONPREM_FIREWALL_PATH
             value: /var/run/onprem-firewall.yaml
         image: europe-north1-docker.pkg.dev/knada-gcp/knada-north/knep
+        resources:
+          limits:
+            memory: 64Mi
+          requests:
+            cpu: 200m
+            memory: 32Mi
         volumeMounts:
           - name: webhook-server-cert
             mountPath: /run/secrets/tls
