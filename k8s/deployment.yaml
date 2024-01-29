@@ -36,7 +36,7 @@ spec:
           limits:
             memory: 64Mi
           requests:
-            cpu: 200m
+            cpu: 10m
             memory: 32Mi
         volumeMounts:
           - name: webhook-server-cert
