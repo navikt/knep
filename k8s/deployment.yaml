@@ -5,6 +5,8 @@ metadata:
   namespace: knada-system
   labels:
     app.kubernetes.io/name: knep
+  annotations:
+    reloader.stakater.com/auto: "true"
 spec:
   replicas: 1
   selector:
