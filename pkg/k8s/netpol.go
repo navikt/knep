@@ -25,6 +25,8 @@ var fqdnNetpolResource = schema.GroupVersionResource{
 	Resource: "fqdnnetworkpolicies",
 }
 
+var fqdnRetryDelays = []int{1, 3, 5}
+
 const (
 	allowListAnnotationKey      = "allowlist"
 	jupyterPodLabelKey          = "component"
@@ -95,7 +97,7 @@ func (k *K8SClient) createNetpol(ctx context.Context, pod corev1.Pod) error {
 		return err
 	}
 
-	if err := k.createOrUpdateFQDNNetworkPolicy(ctx, objectMeta, podSelector, hostMap.FQDN); err != nil {
+	if err := k.createOrUpdateFQDNNetworkPolicyWithRetry(ctx, objectMeta, podSelector, hostMap.FQDN); err != nil {
 		return err
 	}
 
@@ -126,7 +128,7 @@ func (k *K8SClient) createOrUpdateNetworkPolicy(ctx context.Context, objectMeta 
 	return nil
 }
 
-func (k *K8SClient) createOrUpdateFQDNNetworkPolicy(ctx context.Context, objectMeta metav1.ObjectMeta, podSelector metav1.LabelSelector, portHostMap map[int32][]string) error {
+func (k *K8SClient) createOrUpdateFQDNNetworkPolicyWithRetry(ctx context.Context, objectMeta metav1.ObjectMeta, podSelector metav1.LabelSelector, portHostMap map[int32][]string) error {
 	if len(portHostMap) == 0 {
 		return nil
 	}
@@ -136,13 +138,12 @@ func (k *K8SClient) createOrUpdateFQDNNetworkPolicy(ctx context.Context, objectM
 		return err
 	}
 
-	numRetries := 3
 	var fqdnErr error
-	for i := 0; i < numRetries; i++ {
-		if fqdnErr = k.createFQDNNetpol(ctx, fqdnNetworkPolicy, objectMeta); fqdnErr == nil {
+	for i := 0; i < len(fqdnRetryDelays); i++ {
+		if fqdnErr = k.createOrUpdateFQDNNetworkPolicy(ctx, fqdnNetworkPolicy, objectMeta); fqdnErr == nil {
 			break
 		}
-		time.Sleep(time.Duration(i) * time.Second)
+		time.Sleep(time.Duration(fqdnRetryDelays[i]) * time.Second)
 	}
 	if fqdnErr != nil {
 		return fqdnErr
@@ -151,7 +152,7 @@ func (k *K8SClient) createOrUpdateFQDNNetworkPolicy(ctx context.Context, objectM
 	return k.ensureNetpolCreated(ctx, fqdnNetworkPolicy.GetNamespace(), fqdnNetworkPolicy.GetName())
 }
 
-func (k *K8SClient) createFQDNNetpol(ctx context.Context, fqdnNetworkPolicy *unstructured.Unstructured, objectMeta metav1.ObjectMeta) error {
+func (k *K8SClient) createOrUpdateFQDNNetworkPolicy(ctx context.Context, fqdnNetworkPolicy *unstructured.Unstructured, objectMeta metav1.ObjectMeta) error {
 	existing, err := k.dynamicClient.Resource(fqdnNetpolResource).Namespace(objectMeta.Namespace).Get(ctx, fqdnNetworkPolicy.GetName(), metav1.GetOptions{})
 	if err == nil {
 		existing.Object["spec"] = fqdnNetworkPolicy.Object["spec"]
@@ -194,12 +195,19 @@ func (k *K8SClient) ensureNetpolCreated(ctx context.Context, namespace, name str
 }
 
 func (k *K8SClient) deleteNetpol(ctx context.Context, pod corev1.Pod) error {
-	err := k.dynamicClient.Resource(fqdnNetpolResource).Namespace(pod.Namespace).Delete(ctx, pod.Name+"-fqdn", metav1.DeleteOptions{})
-	if err != nil && !apierrors.IsNotFound(err) {
-		return err
+	var fqdnErr error
+	for i := 0; i < len(fqdnRetryDelays); i++ {
+		fqdnErr = k.dynamicClient.Resource(fqdnNetpolResource).Namespace(pod.Namespace).Delete(ctx, pod.Name+"-fqdn", metav1.DeleteOptions{})
+		if fqdnErr == nil || apierrors.IsNotFound(fqdnErr) {
+			break
+		}
+		time.Sleep(time.Duration(fqdnRetryDelays[i]) * time.Second)
+	}
+	if fqdnErr != nil {
+		return fqdnErr
 	}
 
-	err = k.client.NetworkingV1().NetworkPolicies(pod.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
+	err := k.client.NetworkingV1().NetworkPolicies(pod.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
