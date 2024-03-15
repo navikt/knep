@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"k8s.io/api/admission/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -135,6 +136,22 @@ func (k *K8SClient) createOrUpdateFQDNNetworkPolicy(ctx context.Context, objectM
 		return err
 	}
 
+	numRetries := 3
+	var fqdnErr error
+	for i := 0; i < numRetries; i++ {
+		if fqdnErr = k.createFQDNNetpol(ctx, fqdnNetworkPolicy, objectMeta); fqdnErr == nil {
+			break
+		}
+		time.Sleep(time.Duration(i) * time.Second)
+	}
+	if fqdnErr != nil {
+		return fqdnErr
+	}
+
+	return k.ensureNetpolCreated(ctx, fqdnNetworkPolicy.GetNamespace(), fqdnNetworkPolicy.GetName())
+}
+
+func (k *K8SClient) createFQDNNetpol(ctx context.Context, fqdnNetworkPolicy *unstructured.Unstructured, objectMeta metav1.ObjectMeta) error {
 	existing, err := k.dynamicClient.Resource(fqdnNetpolResource).Namespace(objectMeta.Namespace).Get(ctx, fqdnNetworkPolicy.GetName(), metav1.GetOptions{})
 	if err == nil {
 		existing.Object["spec"] = fqdnNetworkPolicy.Object["spec"]
@@ -151,7 +168,7 @@ func (k *K8SClient) createOrUpdateFQDNNetworkPolicy(ctx context.Context, objectM
 		return err
 	}
 
-	return k.ensureNetpolCreated(ctx, fqdnNetworkPolicy.GetNamespace(), fqdnNetworkPolicy.GetName())
+	return nil
 }
 
 func (k *K8SClient) ensureNetpolCreated(ctx context.Context, namespace, name string) error {
