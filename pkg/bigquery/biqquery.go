@@ -11,7 +11,6 @@ import (
 )
 
 type BigQuery struct {
-	client        *bigquery.Client
 	destProjectID string
 	destDatasetID string
 	destTableID   string
@@ -37,7 +36,6 @@ func New(ctx context.Context, projectID, datasetID, tableID string) (*BigQuery, 
 	}
 
 	return &BigQuery{
-		client:        bqClient,
 		destProjectID: projectID,
 		destDatasetID: datasetID,
 		destTableID:   tableID,
@@ -72,7 +70,13 @@ func createAllowlistStatsTableIfNotExists(ctx context.Context, bqClient *bigquer
 }
 
 func (bq *BigQuery) PersistAllowlistStats(ctx context.Context, allowStruct any, pod corev1.Pod) error {
-	table := bq.client.DatasetInProject(bq.destProjectID, bq.destDatasetID).Table(bq.destTableID)
+	bqClient, err := bigquery.NewClient(ctx, bigquery.DetectProjectID)
+	if err != nil {
+		return err
+	}
+	defer bqClient.Close()
+
+	table := bqClient.DatasetInProject(bq.destProjectID, bq.destDatasetID).Table(bq.destTableID)
 
 	allowBytes, err := json.Marshal(allowStruct)
 	if err != nil {
