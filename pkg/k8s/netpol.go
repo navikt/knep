@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/navikt/knep/pkg/hostmap"
 	"k8s.io/api/admission/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -30,6 +32,7 @@ const (
 	jupyterhubLabelValue        = "singleuser-server"
 	airflowPodLabelKey          = "dag_id"
 	netpolCreatedTimeoutSeconds = 20
+	persistAllowlistTimeout     = time.Second * 5
 )
 
 func (k *K8SClient) AlterNetpol(ctx context.Context, admissionRequest *v1beta1.AdmissionRequest) error {
@@ -86,9 +89,7 @@ func (k *K8SClient) createNetpol(ctx context.Context, pod corev1.Pod) error {
 		},
 	}
 
-	if err := k.bigqueryClient.PersistAllowlistStats(ctx, hostMap, pod); err != nil {
-		k.logger.Error("persisting allowlist stats", "error", err)
-	}
+	go k.persistAllowlistStats(ctx, hostMap, pod)
 
 	if err := k.createOrUpdateNetworkPolicy(ctx, objectMeta, podSelector, hostMap.IP); err != nil {
 		return err
@@ -188,6 +189,15 @@ func (k *K8SClient) deleteNetpol(ctx context.Context, pod corev1.Pod) error {
 	}
 
 	return nil
+}
+
+func (k *K8SClient) persistAllowlistStats(ctx context.Context, hostMap hostmap.AllowIPFQDN, pod corev1.Pod) {
+	bqCtx, cancelFunc := context.WithTimeout(ctx, persistAllowlistTimeout)
+	defer cancelFunc()
+
+	if err := k.bigqueryClient.PersistAllowlistStats(bqCtx, hostMap, pod); err != nil {
+		k.logger.Error("persisting allowlist stats", "error", err)
+	}
 }
 
 func createNetworkPolicy(objectMeta metav1.ObjectMeta, podSelector metav1.LabelSelector, portHostMap map[int32][]string) (*networkingv1.NetworkPolicy, error) {
