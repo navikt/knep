@@ -192,10 +192,7 @@ func (k *K8SClient) deleteNetpol(ctx context.Context, pod corev1.Pod) error {
 }
 
 func (k *K8SClient) persistAllowlistStats(ctx context.Context, hostMap hostmap.AllowIPFQDN, pod corev1.Pod) {
-	bqCtx, cancelFunc := context.WithTimeout(ctx, persistAllowlistTimeout)
-	defer cancelFunc()
-
-	if err := k.bigqueryClient.PersistAllowlistStats(bqCtx, hostMap, pod); err != nil {
+	if err := k.bigqueryClient.PersistAllowlistStats(ctx, hostMap, pod); err != nil {
 		k.logger.Error("persisting allowlist stats", "error", err)
 	}
 }
