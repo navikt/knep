@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/navikt/knep/pkg/hostmap"
 	"k8s.io/api/admission/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -88,9 +89,7 @@ func (k *K8SClient) createNetpol(ctx context.Context, pod corev1.Pod) error {
 		},
 	}
 
-	if err := k.bigqueryClient.PersistAllowlistStats(ctx, hostMap, pod); err != nil {
-		k.logger.Error("persisting allowlist stats", "error", err)
-	}
+	go k.persistAllowlistStats(ctx, hostMap, pod)
 
 	if err := k.createOrUpdateNetworkPolicy(ctx, objectMeta, podSelector, hostMap.IP); err != nil {
 		return err
@@ -205,6 +204,12 @@ func (k *K8SClient) deleteNetpol(ctx context.Context, pod corev1.Pod) error {
 	}
 
 	return nil
+}
+
+func (k *K8SClient) persistAllowlistStats(ctx context.Context, hostMap hostmap.AllowIPFQDN, pod corev1.Pod) {
+	if err := k.bigqueryClient.PersistAllowlistStats(ctx, hostMap, pod); err != nil {
+		k.logger.Error("persisting allowlist stats", "error", err, "podname", pod.Name, "namespace", pod.Namespace)
+	}
 }
 
 func createNetworkPolicy(objectMeta metav1.ObjectMeta, podSelector metav1.LabelSelector, portHostMap map[int32][]string) (*networkingv1.NetworkPolicy, error) {
