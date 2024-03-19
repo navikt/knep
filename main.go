@@ -36,7 +36,7 @@ func main() {
 	ctx := context.Background()
 	flag.Parse()
 
-	statisticsChan := make(chan statswriter.AllowListStatistics)
+	statisticsChan := make(chan statswriter.AllowListStatistics, 100) // Channel can store 100 messages before becoming full
 
 	if cfg.WriteStatistics {
 		go statswriter.Run(ctx, cfg.BigQuery, statisticsChan, logger)
