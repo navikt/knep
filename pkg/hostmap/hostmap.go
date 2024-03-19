@@ -78,11 +78,11 @@ func (h *HostMap) CreatePortHostMap(hosts []string) (AllowIPFQDN, error) {
 					if scanHostConfig, ok := h.onpremHosts[scanHost]; ok {
 						allow.IP = appendPortsHost(allow.IP, portInts, scanHostConfig.IPs)
 					} else {
-						allow.FQDN = appendPortsHost(allow.FQDN, portInts, []string{scanHost})
+						allow.FQDN = appendPortsFQDNHost(allow.FQDN, portInts, scanHost)
 					}
 				}
 			} else {
-				allow.FQDN = appendPortsHost(allow.FQDN, portInts, []string{host})
+				allow.FQDN = appendPortsFQDNHost(allow.FQDN, portInts, host)
 			}
 		}
 	}
@@ -115,6 +115,19 @@ func getPorts(ports string) ([]int32, error) {
 	}
 
 	return []int32{int32(tmp)}, nil
+}
+
+func appendPortsFQDNHost(allow map[int32][]string, portInts []int32, host string) map[int32][]string {
+	if !isValidHostName(host) {
+		return allow
+	}
+
+	return appendPortsHost(allow, portInts, []string{host})
+}
+
+func isValidHostName(host string) bool {
+	r, _ := regexp.Compile(`^\w[\w\-\.]*\.[\w\-\.]*\w$`)
+	return r.MatchString(host)
 }
 
 func appendPortsHost(allow map[int32][]string, portInts []int32, host []string) map[int32][]string {
