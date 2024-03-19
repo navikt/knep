@@ -1,19 +1,26 @@
-package bigquery
+package statswriter
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 
 	"cloud.google.com/go/bigquery"
+	"github.com/navikt/knep/pkg/hostmap"
 	"google.golang.org/api/googleapi"
 	corev1 "k8s.io/api/core/v1"
 )
 
+type AllowListStatistics struct {
+	HostMap hostmap.AllowIPFQDN
+	Pod     corev1.Pod
+}
+
 type BigQuery struct {
-	destProjectID string
-	destDatasetID string
-	destTableID   string
+	ProjectID string
+	DatasetID string
+	TableID   string
 }
 
 type allowListTableEntry struct {
@@ -25,21 +32,32 @@ type allowListTableEntry struct {
 	Created   bigquery.NullTimestamp `json:"created"`
 }
 
-func New(ctx context.Context, projectID, datasetID, tableID string) (*BigQuery, error) {
+func Run(ctx context.Context, sink BigQuery, statisticsChan chan AllowListStatistics, logger *slog.Logger) {
 	bqClient, err := bigquery.NewClient(ctx, bigquery.DetectProjectID)
 	if err != nil {
-		return nil, err
+		logger.Error("unable to create bigquery client", "error", err)
+		return
 	}
 
-	if err := createAllowlistStatsTableIfNotExists(ctx, bqClient, projectID, datasetID, tableID); err != nil {
-		return nil, err
+	if err := createAllowlistStatsTableIfNotExists(ctx, bqClient, sink.ProjectID, sink.DatasetID, sink.TableID); err != nil {
+		logger.Error("unable to create statistics table in bigquery", "error", err)
+		return
+	}
+	if err := bqClient.Close(); err != nil {
+		logger.Error("unable to close bigquery client", "error", err)
+		return
 	}
 
-	return &BigQuery{
-		destProjectID: projectID,
-		destDatasetID: datasetID,
-		destTableID:   tableID,
-	}, nil
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case allowStats := <-statisticsChan:
+			if err := persistAllowlistStats(ctx, sink, allowStats.HostMap, allowStats.Pod); err != nil {
+				logger.Error("persisting allowlist stats", "error", err, "podname", allowStats.Pod.Name, "namespace", allowStats.Pod.Namespace)
+			}
+		}
+	}
 }
 
 func createAllowlistStatsTableIfNotExists(ctx context.Context, bqClient *bigquery.Client, projectID, datasetID, tableID string) error {
@@ -69,14 +87,14 @@ func createAllowlistStatsTableIfNotExists(ctx context.Context, bqClient *bigquer
 	return nil
 }
 
-func (bq *BigQuery) PersistAllowlistStats(ctx context.Context, allowStruct any, pod corev1.Pod) error {
+func persistAllowlistStats(ctx context.Context, sink BigQuery, allowStruct any, pod corev1.Pod) error {
 	bqClient, err := bigquery.NewClient(ctx, bigquery.DetectProjectID)
 	if err != nil {
 		return err
 	}
 	defer bqClient.Close()
 
-	table := bqClient.DatasetInProject(bq.destProjectID, bq.destDatasetID).Table(bq.destTableID)
+	table := bqClient.DatasetInProject(sink.ProjectID, sink.DatasetID).Table(sink.TableID)
 
 	allowBytes, err := json.Marshal(allowStruct)
 	if err != nil {
@@ -93,8 +111,7 @@ func (bq *BigQuery) PersistAllowlistStats(ctx context.Context, allowStruct any, 
 		Created:   bigquery.NullTimestamp{Timestamp: pod.CreationTimestamp.Time, Valid: true},
 	}
 
-	inserter := table.Inserter()
-	return inserter.Put(ctx, tableEntry)
+	return table.Inserter().Put(ctx, tableEntry)
 }
 
 func getServiceTypeAndTeamFromPodSpec(pod corev1.Pod) (string, string) {

@@ -8,32 +8,20 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/navikt/knep/pkg/bigquery"
 	"github.com/navikt/knep/pkg/hostmap"
 	"github.com/navikt/knep/pkg/k8s"
+	"github.com/navikt/knep/pkg/statswriter"
 	"k8s.io/api/admission/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-type StatsSink struct {
-	ProjectID string
-	DatasetID string
-	TableID   string
-}
 
 type AdmissionHandler struct {
 	k8sClient *k8s.K8SClient
 	logger    *slog.Logger
 }
 
-func NewAdmissionHandler(ctx context.Context, inCluster bool, hostMap *hostmap.HostMap, stats StatsSink, logger *slog.Logger) (*AdmissionHandler, error) {
-	bqClient, err := bigquery.New(ctx, stats.ProjectID, stats.DatasetID, stats.TableID)
-	if err != nil {
-		logger.Error("creating bigquery client", "error", err)
-		return nil, err
-	}
-
-	k8sClient, err := k8s.New(inCluster, hostMap, bqClient, logger)
+func NewAdmissionHandler(ctx context.Context, inCluster bool, hostMap *hostmap.HostMap, statisticsChan chan statswriter.AllowListStatistics, logger *slog.Logger) (*AdmissionHandler, error) {
+	k8sClient, err := k8s.New(inCluster, hostMap, statisticsChan, logger)
 	if err != nil {
 		logger.Error("creating k8s client", "error", err)
 		return nil, err
