@@ -194,19 +194,12 @@ func (k *K8SClient) ensureNetpolCreated(ctx context.Context, namespace, name str
 }
 
 func (k *K8SClient) deleteNetpol(ctx context.Context, pod corev1.Pod) error {
-	var fqdnErr error
-	for i := 1; i <= numFQDNRetries; i++ {
-		fqdnErr = k.dynamicClient.Resource(fqdnNetpolResource).Namespace(pod.Namespace).Delete(ctx, pod.Name+"-fqdn", metav1.DeleteOptions{})
-		if fqdnErr == nil || apierrors.IsNotFound(fqdnErr) {
-			break
-		}
-		time.Sleep(time.Duration(i) * time.Second)
-	}
-	if fqdnErr != nil {
-		return fqdnErr
+	err := k.dynamicClient.Resource(fqdnNetpolResource).Namespace(pod.Namespace).Delete(ctx, pod.Name+"-fqdn", metav1.DeleteOptions{})
+	if err != nil {
+		return err
 	}
 
-	err := k.client.NetworkingV1().NetworkPolicies(pod.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
+	err = k.client.NetworkingV1().NetworkPolicies(pod.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
