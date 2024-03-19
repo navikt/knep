@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/navikt/knep/pkg/bigquery"
 	"github.com/navikt/knep/pkg/hostmap"
+	"github.com/navikt/knep/pkg/statswriter"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -16,13 +16,13 @@ import (
 
 type K8SClient struct {
 	hostMap        *hostmap.HostMap
+	statisticsChan chan statswriter.AllowListStatistics
 	client         *kubernetes.Clientset
 	dynamicClient  *dynamic.DynamicClient
-	bigqueryClient *bigquery.BigQuery
 	logger         *slog.Logger
 }
 
-func New(inCluster bool, hostMap *hostmap.HostMap, bigqueryClient *bigquery.BigQuery, logger *slog.Logger) (*K8SClient, error) {
+func New(inCluster bool, hostMap *hostmap.HostMap, statisticsChan chan statswriter.AllowListStatistics, logger *slog.Logger) (*K8SClient, error) {
 	config, err := createKubeConfig(inCluster)
 	if err != nil {
 		return nil, err
@@ -40,9 +40,9 @@ func New(inCluster bool, hostMap *hostmap.HostMap, bigqueryClient *bigquery.BigQ
 
 	return &K8SClient{
 		hostMap:        hostMap,
+		statisticsChan: statisticsChan,
 		client:         client,
 		dynamicClient:  dynamicClient,
-		bigqueryClient: bigqueryClient,
 		logger:         logger,
 	}, nil
 }

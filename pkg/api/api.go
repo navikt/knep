@@ -9,15 +9,16 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/httplog/v2"
 	"github.com/navikt/knep/pkg/hostmap"
+	"github.com/navikt/knep/pkg/statswriter"
 )
 
-func New(ctx context.Context, incluster bool, onpremFirewallFilePath string, stats StatsSink, log *slog.Logger) (*chi.Mux, error) {
+func New(ctx context.Context, incluster bool, onpremFirewallFilePath string, statisticsChan chan statswriter.AllowListStatistics, log *slog.Logger) (*chi.Mux, error) {
 	hostMap, err := hostmap.New(onpremFirewallFilePath)
 	if err != nil {
 		return nil, err
 	}
 
-	admissionHandler, err := NewAdmissionHandler(ctx, incluster, hostMap, stats, log)
+	admissionHandler, err := NewAdmissionHandler(ctx, incluster, hostMap, statisticsChan, log)
 	if err != nil {
 		return nil, err
 	}
