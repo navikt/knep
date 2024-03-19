@@ -25,14 +25,13 @@ var fqdnNetpolResource = schema.GroupVersionResource{
 	Resource: "fqdnnetworkpolicies",
 }
 
-var fqdnRetryDelays = []int{1, 3, 5}
-
 const (
 	allowListAnnotationKey      = "allowlist"
 	jupyterPodLabelKey          = "component"
 	jupyterhubLabelValue        = "singleuser-server"
 	airflowPodLabelKey          = "dag_id"
 	netpolCreatedTimeoutSeconds = 20
+	numFQDNRetries              = 3
 )
 
 func (k *K8SClient) AlterNetpol(ctx context.Context, admissionRequest *v1beta1.AdmissionRequest) error {
@@ -139,11 +138,11 @@ func (k *K8SClient) createOrUpdateFQDNNetworkPolicyWithRetry(ctx context.Context
 	}
 
 	var fqdnErr error
-	for i := 0; i < len(fqdnRetryDelays); i++ {
+	for i := 1; i <= numFQDNRetries; i++ {
 		if fqdnErr = k.createOrUpdateFQDNNetworkPolicy(ctx, fqdnNetworkPolicy, objectMeta); fqdnErr == nil {
 			break
 		}
-		time.Sleep(time.Duration(fqdnRetryDelays[i]) * time.Second)
+		time.Sleep(time.Duration(i) * time.Second)
 	}
 	if fqdnErr != nil {
 		return fqdnErr
@@ -196,12 +195,12 @@ func (k *K8SClient) ensureNetpolCreated(ctx context.Context, namespace, name str
 
 func (k *K8SClient) deleteNetpol(ctx context.Context, pod corev1.Pod) error {
 	var fqdnErr error
-	for i := 0; i < len(fqdnRetryDelays); i++ {
+	for i := 1; i <= numFQDNRetries; i++ {
 		fqdnErr = k.dynamicClient.Resource(fqdnNetpolResource).Namespace(pod.Namespace).Delete(ctx, pod.Name+"-fqdn", metav1.DeleteOptions{})
 		if fqdnErr == nil || apierrors.IsNotFound(fqdnErr) {
 			break
 		}
-		time.Sleep(time.Duration(fqdnRetryDelays[i]) * time.Second)
+		time.Sleep(time.Duration(i) * time.Second)
 	}
 	if fqdnErr != nil {
 		return fqdnErr
