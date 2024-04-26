@@ -53,21 +53,38 @@ informatica.nav.no:
     - "123.123.123.123"
   port: 6005-6010
 `
+	externalHostYaml = `
+pypi.org:
+  port: 443
+  ips:
+    - "151.101.0.0/16"
+`
 )
 
 func Test_CreatePortHostMap(t *testing.T) {
-	firewallMapfile, err := os.CreateTemp("/tmp", "onprem-firewall.yaml")
+	onpremHostMapFile, err := os.CreateTemp("/tmp", "onprem-firewall.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(firewallMapfile.Name())
+	defer os.Remove(onpremHostMapFile.Name())
 
-	_, err = firewallMapfile.Write([]byte(onpremHostYaml))
+	_, err = onpremHostMapFile.Write([]byte(onpremHostYaml))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	hostMap, err := New(firewallMapfile.Name())
+	externalHostMapFile, err := os.CreateTemp("/tmp", "external-hosts.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(externalHostMapFile.Name())
+
+	_, err = externalHostMapFile.Write([]byte(externalHostYaml))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	hostMap, err := New(onpremHostMapFile.Name(), externalHostMapFile.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,6 +157,23 @@ func Test_CreatePortHostMap(t *testing.T) {
 					6008: {"123.123.123.123"},
 					6009: {"123.123.123.123"},
 					6010: {"123.123.123.123"},
+				},
+			},
+		},
+		{
+			name: "Test create hostmap external host with cidr",
+			args: args{
+				hosts: []string{
+					"pypi.org",
+					"google.com:123",
+				},
+			},
+			want: AllowIPFQDN{
+				IP: map[int32][]string{
+					443: {"151.101.0.0/16"},
+				},
+				FQDN: map[int32][]string{
+					123: {"google.com"},
 				},
 			},
 		},

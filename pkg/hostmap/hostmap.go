@@ -16,30 +16,25 @@ type OnpremHost struct {
 	Scan []string `json:"scan"`
 }
 
+type ExternalHost struct {
+	IPs  []string `json:"ips"`
+	Port string   `json:"port"`
+}
+
 type AllowIPFQDN struct {
 	IP   map[int32][]string
 	FQDN map[int32][]string
 }
 
 type HostMap struct {
-	onpremHosts map[string]OnpremHost
+	onpremHosts   map[string]OnpremHost
+	externalHosts map[string]ExternalHost
 }
 
-func New(onpremFirewallPath string) (*HostMap, error) {
-	onpremHosts, err := getOnpremHostMap(onpremFirewallPath)
+func New(onpremHostMapFilePath, externalHostMapFilePath string) (*HostMap, error) {
+	dataBytes, err := os.ReadFile(onpremHostMapFilePath)
 	if err != nil {
-		return nil, err
-	}
-
-	return &HostMap{
-		onpremHosts: onpremHosts,
-	}, nil
-}
-
-func getOnpremHostMap(onpremFirewallPath string) (map[string]OnpremHost, error) {
-	dataBytes, err := os.ReadFile(onpremFirewallPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read file %s: %w", onpremFirewallPath, err)
+		return nil, fmt.Errorf("failed to read file %s: %w", onpremHostMapFilePath, err)
 	}
 
 	var onpremHostMap map[string]OnpremHost
@@ -47,7 +42,20 @@ func getOnpremHostMap(onpremFirewallPath string) (map[string]OnpremHost, error) 
 		return nil, err
 	}
 
-	return onpremHostMap, nil
+	dataBytes, err = os.ReadFile(externalHostMapFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file %s: %w", externalHostMapFilePath, err)
+	}
+
+	var externalHostMap map[string]ExternalHost
+	if err := yaml.Unmarshal(dataBytes, &externalHostMap); err != nil {
+		return nil, err
+	}
+
+	return &HostMap{
+		onpremHosts:   onpremHostMap,
+		externalHosts: externalHostMap,
+	}, nil
 }
 
 func (h *HostMap) CreatePortHostMap(hosts []string) (AllowIPFQDN, error) {
@@ -81,6 +89,8 @@ func (h *HostMap) CreatePortHostMap(hosts []string) (AllowIPFQDN, error) {
 						allow.FQDN = appendPortsFQDNHost(allow.FQDN, portInts, scanHost)
 					}
 				}
+			} else if hostConfig, ok := h.externalHosts[host]; ok {
+				allow.IP = appendPortsHost(allow.IP, portInts, hostConfig.IPs)
 			} else {
 				allow.FQDN = appendPortsFQDNHost(allow.FQDN, portInts, host)
 			}
