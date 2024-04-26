@@ -45,10 +45,10 @@ spec:
             mountPath: /run/secrets/tls
             readOnly: true
           - name: onprem-firewall-map 
-            mountPath: /var/run
+            mountPath: /var/run/onprem-firewall.yaml
             subPath: onprem-firewall.yaml
           - name: external-hosts-map 
-            mountPath: /var/run
+            mountPath: /var/run/external-hosts.yaml
             subPath: external-hosts.yaml
       volumes:
         - name: webhook-server-cert
