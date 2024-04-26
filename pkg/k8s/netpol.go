@@ -215,7 +215,7 @@ func (k *K8SClient) createNetworkPolicy(objectMeta metav1.ObjectMeta, podSelecto
 
 		policyPeers := []networkingv1.NetworkPolicyPeer{}
 		for _, host := range hosts {
-			cidr, ip, err := parseIPHost(host)
+			ip, cidr, err := parseIPHost(host)
 			if err != nil {
 				k.logger.Error("parsing IP host", "error", err, "host", host)
 				continue
