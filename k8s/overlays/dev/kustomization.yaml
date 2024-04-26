@@ -1,0 +1,9 @@
+resources:
+- ../../base
+
+patches:
+- path: serviceaccount-patch.yaml
+- path: deployment-patch.yaml
+
+generatorOptions:
+  disableNameSuffixHash: true

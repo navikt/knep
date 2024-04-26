@@ -1,0 +1,13 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: knep
+  namespace: knada-system
+spec:
+  template:
+    spec:
+      containers:
+        - name: knep
+          env:
+            - name: BIGQUERY_PROJECT
+              value: nada-prod-6977

@@ -24,7 +24,7 @@ spec:
         - containerPort: 9443
         env:
           - name: BIGQUERY_PROJECT
-            value: nada-prod-6977
+            value: <placeholder>
           - name: BIGQUERY_DATASET
             value: knep
           - name: BIGQUERY_TABLE
@@ -46,6 +46,8 @@ spec:
             readOnly: true
           - name: onprem-firewall-map 
             mountPath: "/var/run"
+          - name: external-hosts-map 
+            mountPath: "/var/run"
       volumes:
         - name: webhook-server-cert
           secret:
@@ -53,3 +55,6 @@ spec:
         - name: onprem-firewall-map
           configMap:
             name: onprem-firewall-map
+        - name: external-hosts-map
+          configMap:
+            name: knep-external-hosts-map

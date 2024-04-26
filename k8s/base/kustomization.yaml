@@ -1,0 +1,9 @@
+resources:
+  - cert.yaml
+  - deployment.yaml
+  - issuer.yaml
+  - role_binding.yaml
+  - role.yaml
+  - service.yaml
+  - serviceaccount.yaml
+  - webhookconfig.yaml
