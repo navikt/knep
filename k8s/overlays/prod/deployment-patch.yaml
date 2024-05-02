@@ -10,4 +10,4 @@ spec:
         - name: knep
           env:
             - name: BIGQUERY_PROJECT
-              value: nada-dev-db2e
+              value: nada-prod-6977
