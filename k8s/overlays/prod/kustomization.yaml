@@ -7,3 +7,8 @@ patches:
 
 generatorOptions:
   disableNameSuffixHash: true
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+images:
+- name: europe-north1-docker.pkg.dev/knada-gcp/knada-north/knep
+  newTag: 0083a4875ccab604aa3af1b34c2c42949994967f
