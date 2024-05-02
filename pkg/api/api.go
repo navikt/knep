@@ -12,8 +12,8 @@ import (
 	"github.com/navikt/knep/pkg/statswriter"
 )
 
-func New(ctx context.Context, incluster bool, onpremFirewallFilePath string, statisticsChan chan statswriter.AllowListStatistics, log *slog.Logger) (*chi.Mux, error) {
-	hostMap, err := hostmap.New(onpremFirewallFilePath)
+func New(ctx context.Context, incluster bool, onpremHostMapFilePath, externalHostMapFilePath string, statisticsChan chan statswriter.AllowListStatistics, log *slog.Logger) (*chi.Mux, error) {
+	hostMap, err := hostmap.New(onpremHostMapFilePath, externalHostMapFilePath)
 	if err != nil {
 		return nil, err
 	}

@@ -110,7 +110,7 @@ func (k *K8SClient) createOrUpdateNetworkPolicy(ctx context.Context, objectMeta 
 		return nil
 	}
 
-	networkPolicy, err := createNetworkPolicy(objectMeta, podSelector, portHostMap)
+	networkPolicy, err := k.createNetworkPolicy(objectMeta, podSelector, portHostMap)
 	if err != nil {
 		return err
 	}
@@ -209,15 +209,20 @@ func (k *K8SClient) deleteNetpol(ctx context.Context, pod corev1.Pod) error {
 	return nil
 }
 
-func createNetworkPolicy(objectMeta metav1.ObjectMeta, podSelector metav1.LabelSelector, portHostMap map[int32][]string) (*networkingv1.NetworkPolicy, error) {
+func (k *K8SClient) createNetworkPolicy(objectMeta metav1.ObjectMeta, podSelector metav1.LabelSelector, portHostMap map[int32][]string) (*networkingv1.NetworkPolicy, error) {
 	egressRules := []networkingv1.NetworkPolicyEgressRule{}
 	for port, hosts := range portHostMap {
 
 		policyPeers := []networkingv1.NetworkPolicyPeer{}
 		for _, host := range hosts {
+			ip, cidr, err := parseIPHost(host)
+			if err != nil {
+				k.logger.Error("parsing IP host", "error", err, "host", host)
+				continue
+			}
 			policyPeers = append(policyPeers, networkingv1.NetworkPolicyPeer{
 				IPBlock: &networkingv1.IPBlock{
-					CIDR: host + "/32",
+					CIDR: ip + "/" + cidr,
 				},
 			})
 		}
@@ -320,4 +325,15 @@ func createPodSelector(pod corev1.Pod) (metav1.LabelSelector, error) {
 	}
 
 	return metav1.LabelSelector{}, fmt.Errorf("invalid pod labels when creating network policy for pod %v", pod.Name)
+}
+
+func parseIPHost(host string) (string, string, error) {
+	hostParts := strings.Split(host, "/")
+	if len(hostParts) == 1 {
+		return host, "32", nil
+	} else if len(hostParts) == 2 {
+		return hostParts[0], hostParts[1], nil
+	}
+
+	return "", "", fmt.Errorf("invalid ip host: %v", host)
 }
