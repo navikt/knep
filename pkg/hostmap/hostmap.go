@@ -132,7 +132,7 @@ func appendPortsFQDNHost(allow map[int32][]string, portInts []int32, host string
 		return allow
 	}
 
-	return appendPortsHost(allow, portInts, []string{host})
+	return appendPortsHost(allow, portInts, []string{strings.ToLower(host)})
 }
 
 func isValidHostName(host string) bool {
