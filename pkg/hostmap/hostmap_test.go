@@ -120,6 +120,23 @@ func Test_CreatePortHostMap(t *testing.T) {
 			},
 		},
 		{
+			name: "Test create host map ensure lower case hostname",
+			args: args{
+				hosts: []string{
+					"Google.com",
+					"123.123.123.123:22",
+				},
+			},
+			want: AllowIPFQDN{
+				FQDN: map[int32][]string{
+					443: {"google.com"},
+				},
+				IP: map[int32][]string{
+					22: {"123.123.123.123"},
+				},
+			},
+		},
+		{
 			name: "Test create host map with oracle scan hosts",
 			args: args{
 				hosts: []string{
