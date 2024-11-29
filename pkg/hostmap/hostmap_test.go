@@ -23,11 +23,10 @@ db-scan.nav.no:
     - "2.3.4.5"
     - "6.7.8.9"
     - "10.11.12.13"
-  scan:
-    - db1-vip.adeo.no
-    - db2-vip.adeo.no
-    - db3-vip.adeo.no
-    - db4-vip.adeo.no
+    - "14.15.16.17"
+    - "18.19.20.21"
+    - "22.23.24.25"
+    - "26.27.28.29"
 db1-vip.adeo.no:
   ips: 
     - "14.15.16.17"

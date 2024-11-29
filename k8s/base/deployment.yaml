@@ -48,7 +48,7 @@ spec:
             readOnly: true
           - name: onprem-firewall-map 
             mountPath: /var/run/onprem-hosts.yaml
-            subPath: onprem-firewall.yaml
+            subPath: onprem-hostmap.yaml
           - name: external-hosts-map 
             mountPath: /var/run/external-hosts.yaml
             subPath: external-hosts.yaml
@@ -58,7 +58,7 @@ spec:
             secretName: knep-webhook-server-cert
         - name: onprem-firewall-map
           configMap:
-            name: onprem-firewall-map
+            name: onprem-hostmap
         - name: external-hosts-map
           configMap:
             name: knep-external-hosts-map
