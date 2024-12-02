@@ -194,6 +194,25 @@ func Test_CreatePortHostMap(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "Test scheme is removed from hosts",
+			args: args{
+				hosts: []string{
+					"https://pypi.org",
+					"https://google.com:123",
+					"oracle://db.nav.no:1521",
+				},
+			},
+			want: AllowIPFQDN{
+				IP: map[int32][]string{
+					443:  {"151.101.0.0/16"},
+					1521: {"1.2.3.4"},
+				},
+				FQDN: map[int32][]string{
+					123: {"google.com"},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
