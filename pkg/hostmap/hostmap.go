@@ -13,7 +13,6 @@ import (
 type OnpremHost struct {
 	IPs  []string `json:"ips"`
 	Port string   `json:"port"`
-	Scan []string `json:"scan"`
 }
 
 type ExternalHost struct {
@@ -82,13 +81,6 @@ func (h *HostMap) CreatePortHostMap(hosts []string) (AllowIPFQDN, error) {
 		} else {
 			if hostConfig, ok := h.onpremHosts[host]; ok {
 				allow.IP = appendPortsHost(allow.IP, portInts, hostConfig.IPs)
-				for _, scanHost := range hostConfig.Scan {
-					if scanHostConfig, ok := h.onpremHosts[scanHost]; ok {
-						allow.IP = appendPortsHost(allow.IP, portInts, scanHostConfig.IPs)
-					} else {
-						allow.FQDN = appendPortsFQDNHost(allow.FQDN, portInts, scanHost)
-					}
-				}
 			} else if hostConfig, ok := h.externalHosts[host]; ok {
 				allow.IP = appendPortsHost(allow.IP, portInts, hostConfig.IPs)
 			} else {
