@@ -101,6 +101,7 @@ func Test_CreatePortHostMap(t *testing.T) {
 			args: args{
 				hosts: []string{
 					"google.com",
+					"https://nav.no",
 					"db.nav.no:5432",
 					"db2.nav.no:5432",
 					"123.123.123.123:22",
@@ -109,7 +110,7 @@ func Test_CreatePortHostMap(t *testing.T) {
 			},
 			want: AllowIPFQDN{
 				FQDN: map[int32][]string{
-					443: {"google.com"},
+					443: {"google.com", "nav.no"},
 				},
 				IP: map[int32][]string{
 					22:   {"123.123.123.123"},
