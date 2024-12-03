@@ -101,6 +101,7 @@ func Test_CreatePortHostMap(t *testing.T) {
 			args: args{
 				hosts: []string{
 					"google.com",
+					"https://nav.no",
 					"db.nav.no:5432",
 					"db2.nav.no:5432",
 					"123.123.123.123:22",
@@ -109,7 +110,7 @@ func Test_CreatePortHostMap(t *testing.T) {
 			},
 			want: AllowIPFQDN{
 				FQDN: map[int32][]string{
-					443: {"google.com"},
+					443: {"google.com", "nav.no"},
 				},
 				IP: map[int32][]string{
 					22:   {"123.123.123.123"},
@@ -187,6 +188,25 @@ func Test_CreatePortHostMap(t *testing.T) {
 			want: AllowIPFQDN{
 				IP: map[int32][]string{
 					443: {"151.101.0.0/16"},
+				},
+				FQDN: map[int32][]string{
+					123: {"google.com"},
+				},
+			},
+		},
+		{
+			name: "Test scheme is removed from hosts",
+			args: args{
+				hosts: []string{
+					"https://pypi.org",
+					"https://google.com:123",
+					"oracle://db.nav.no:1521",
+				},
+			},
+			want: AllowIPFQDN{
+				IP: map[int32][]string{
+					443:  {"151.101.0.0/16"},
+					1521: {"1.2.3.4"},
 				},
 				FQDN: map[int32][]string{
 					123: {"google.com"},
