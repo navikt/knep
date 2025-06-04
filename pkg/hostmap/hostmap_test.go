@@ -213,6 +213,26 @@ func Test_CreatePortHostMap(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "Test url paths are ignored in allowlist items",
+			args: args{
+				hosts: []string{
+					"google.com/path/to/something",
+					"https://nav.no:443/path/to/resource",
+					"db.nav.no:5432-5433/service",
+					"db2.nav.no:5432/service?var=value&var2=value2",
+				},
+			},
+			want: AllowIPFQDN{
+				FQDN: map[int32][]string{
+					443: {"google.com", "nav.no"},
+				},
+				IP: map[int32][]string{
+					5432: {"1.2.3.4", "11.22.33.44"},
+					5433: {"1.2.3.4"},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {

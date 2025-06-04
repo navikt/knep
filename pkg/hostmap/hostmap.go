@@ -66,7 +66,7 @@ func (h *HostMap) CreatePortHostMap(hosts []string) (AllowIPFQDN, error) {
 
 	for _, hostPort := range hosts {
 		parts := strings.Split(trimScheme(hostPort), ":")
-		host := parts[0]
+		host := strings.Split(parts[0], "/")[0] // Remove host path if present
 		portInts := []int32{443}
 		var err error
 		if len(parts) > 1 {
@@ -102,6 +102,8 @@ func trimScheme(host string) string {
 }
 
 func getPorts(ports string) ([]int32, error) {
+	re := regexp.MustCompile(`\b\d+(-\d+)?\b`)
+	ports = re.FindString(ports)
 	if portParts := strings.Split(ports, "-"); len(portParts) == 2 {
 		startPort, err := strconv.Atoi(portParts[0])
 		if err != nil {
