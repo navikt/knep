@@ -12,6 +12,12 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/name: knep
+  nodeSelector:
+    knada-infrastructure: ""
+  tolerations:
+    - key: "knada-infrastructure"
+      operator: "Equal"
+      effect: "NoSchedule"
   template:
     metadata:
       labels:
