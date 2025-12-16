@@ -102,6 +102,22 @@ func trimScheme(host string) string {
 }
 
 func getPorts(ports string) ([]int32, error) {
+	//  Comma-separated ports
+	if strings.Contains(ports, ",") {
+		multiplePorts := []int32{}
+
+		for _, part := range strings.Split(ports, ",") {
+			addPort, err := strconv.Atoi(strings.TrimSpace(part))
+			if err != nil {
+				return []int32{}, err
+			}
+			multiplePorts = append(multiplePorts, int32(addPort))
+		}
+
+		return multiplePorts, nil
+	}
+
+	// Port ranges and single ports
 	re := regexp.MustCompile(`\b\d+(-\d+)?\b`)
 	ports = re.FindString(ports)
 	if portParts := strings.Split(ports, "-"); len(portParts) == 2 {

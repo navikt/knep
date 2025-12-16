@@ -51,6 +51,11 @@ informatica.nav.no:
   ips: 
     - "123.123.123.123"
   port: 6005-6010
+address.aivencloud.com:
+  ips: 
+    - "123.123.123.123"
+    - "123.123.123.124"
+  port: 26484,26487
 `
 	externalHostYaml = `
 pypi.org:
@@ -174,6 +179,24 @@ func Test_CreatePortHostMap(t *testing.T) {
 					6008: {"123.123.123.123"},
 					6009: {"123.123.123.123"},
 					6010: {"123.123.123.123"},
+				},
+			},
+		},
+		{
+			name: "Test create hostmap multiple ports",
+			args: args{
+				hosts: []string{
+					"google.com",
+					"address.aivencloud.com:26484,26487",
+				},
+			},
+			want: AllowIPFQDN{
+				FQDN: map[int32][]string{
+					443: {"google.com"},
+				},
+				IP: map[int32][]string{
+					26484: {"123.123.123.123", "123.123.123.124"},
+					26487: {"123.123.123.123", "123.123.123.124"},
 				},
 			},
 		},
