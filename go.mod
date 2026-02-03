@@ -7,7 +7,7 @@ require (
 	github.com/go-chi/chi/v5 v5.2.4
 	github.com/go-chi/httplog/v2 v2.1.1
 	github.com/google/go-cmp v0.7.0
-	google.golang.org/api v0.262.0
+	google.golang.org/api v0.264.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.35.0
 	k8s.io/apimachinery v0.35.0
@@ -73,7 +73,7 @@ require (
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/genproto v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20251202230838-ff82c1b0f217 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260120174246-409b4a993575 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260122232226-8e98ce8d340d // indirect
 	google.golang.org/grpc v1.78.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
