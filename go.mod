@@ -7,11 +7,11 @@ require (
 	github.com/go-chi/chi/v5 v5.2.5
 	github.com/go-chi/httplog/v2 v2.1.1
 	github.com/google/go-cmp v0.7.0
-	google.golang.org/api v0.275.0
+	google.golang.org/api v0.276.0
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.35.3
-	k8s.io/apimachinery v0.35.3
-	k8s.io/client-go v0.35.3
+	k8s.io/api v0.35.4
+	k8s.io/apimachinery v0.35.4
+	k8s.io/client-go v0.35.4
 )
 
 require (
