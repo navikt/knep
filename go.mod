@@ -7,7 +7,7 @@ require (
 	github.com/go-chi/chi/v5 v5.2.5
 	github.com/go-chi/httplog/v2 v2.1.1
 	github.com/google/go-cmp v0.7.0
-	google.golang.org/api v0.277.0
+	google.golang.org/api v0.278.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.36.0
 	k8s.io/apimachinery v0.36.0
