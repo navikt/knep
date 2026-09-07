@@ -3,11 +3,11 @@ module github.com/navikt/knep
 go 1.26.0
 
 require (
-	cloud.google.com/go/bigquery v1.82.0
+	cloud.google.com/go/bigquery v1.83.0
 	github.com/go-chi/chi/v5 v5.3.2
 	github.com/go-chi/httplog/v2 v2.1.1
 	github.com/google/go-cmp v0.7.0
-	google.golang.org/api v0.295.0
+	google.golang.org/api v0.297.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.37.0
 	k8s.io/apimachinery v0.37.0
