@@ -18,6 +18,12 @@ spec:
         app.kubernetes.io/name: knep
     spec:
       serviceAccountName: knep
+      nodeSelector:
+        knada-infrastructure: ""
+      tolerations:
+        - key: "knada-infrastructure"
+          effect: "NoSchedule"
+          operator: "Exists"
       containers:
       - name: knep
         ports:
